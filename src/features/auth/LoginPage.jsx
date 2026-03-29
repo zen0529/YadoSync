@@ -41,7 +41,7 @@ export const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-[#e8e8e8] font-sans">
       <Card className="w-full max-w-sm border border-black/5 shadow-sm">
         <CardHeader className="text-center pb-2">
-          <p className="text-2xl font-extrabold text-green-600 tracking-wide mb-1">RESORTSYNC</p>
+          <p className="text-2xl font-extrabold text-green-600 tracking-wide mb-1">YadoBooking</p>
           <CardTitle className="text-sm font-medium text-muted-foreground">
             {isSignUp ? "Create your account" : "Sign in to your account"}
           </CardTitle>
