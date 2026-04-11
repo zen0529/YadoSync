@@ -2,18 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { RESORTS, TIMEFRAMES } from "@/data/constants";
+import { TIMEFRAMES } from "@/data/constants";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import yadoLogo from "@/assets/logoWhite.png";
@@ -35,12 +24,11 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { id: "overview",  label: "Overview",  icon: LayoutGrid },
-  { id: "bookings",  label: "Bookings",  icon: CalendarCheck },
-  { id: "resorts",   label: "Resorts",   icon: Building2 },
-  { id: "earnings",  label: "Earnings",  icon: Coins },
+  { id: "overview",    label: "Overview",    icon: LayoutGrid },
+  { id: "properties",  label: "Properties",  icon: Building2 },
+  { id: "bookings",    label: "Bookings",    icon: CalendarCheck },
+  { id: "earnings",    label: "Earnings",    icon: Coins },
 ];
-
 
 const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) => {
   const { dark, toggle } = useTheme();
@@ -56,7 +44,9 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
             <img src={yadoLogo} alt="" className="w-8 h-10 shrink-0" aria-hidden="true" />
             <div>
               <p className="text-lg font-extrabold text-white tracking-wide">YadoManagement</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">Channel Manager</p>
+              <span className="inline-block text-[9px] font-bold bg-green-500/80 text-white px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5">
+                Superadmin
+              </span>
             </div>
           </div>
         )}
@@ -78,7 +68,7 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
           const Icon = n.icon;
           const isActive = page === n.id;
           return (
-            <Link key={n.id} to={`/dashboard/${n.id}`} onClick={closeSidebar}
+            <Link key={n.id} to={`/admin/${n.id}`} onClick={closeSidebar}
               title={collapsed ? n.label : undefined}
               className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5"} px-3 py-2.5 rounded-xl text-sm mb-1 transition-all duration-200
                 ${isActive
@@ -91,7 +81,7 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
         })}
 
         {!collapsed && <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-2 mb-2 mt-5">Support</p>}
-        <Link to="/dashboard/settings" onClick={closeSidebar}
+        <Link to="/admin/settings" onClick={closeSidebar}
           title={collapsed ? "Settings" : undefined}
           className={`w-full flex items-center ${collapsed ? "justify-center mt-4" : "gap-2.5"} px-3 py-2.5 rounded-xl text-sm transition-all duration-200
             ${page === "settings"
@@ -124,27 +114,9 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
         {!collapsed && (
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-white/90 truncate">{username}</p>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <button className="text-[10px] text-white/50 hover:text-red-300 transition-colors flex items-center gap-1">
-                  <LogOut className="w-2.5 h-2.5" /> Sign out
-                </button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Sign out</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to sign out of YadoManagement?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction variant="destructive" onClick={signOut}>
-                    Sign out
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <button onClick={signOut} className="text-[10px] text-white/50 hover:text-red-300 transition-colors flex items-center gap-1">
+              <LogOut className="w-2.5 h-2.5" /> Sign out
+            </button>
           </div>
         )}
       </div>
@@ -152,9 +124,9 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
   );
 };
 
-const DashboardLayoutInner = () => {
+const SuperadminLayoutInner = () => {
   const { user, signOut } = useAuth();
-  const username = user?.user_metadata?.username || user?.email?.split("@")[0] || "User";
+  const username = user?.user_metadata?.username || user?.email?.split("@")[0] || "Admin";
   const location = useLocation();
   const page = location.pathname.split("/")[2] || "overview";
   const isSettingsPage = page === "settings";
@@ -164,17 +136,17 @@ const DashboardLayoutInner = () => {
   const [dateTo, setDateTo]               = useState("");
   const [sidebarOpen, setSidebarOpen]     = useState(false);
   const [collapsed, setCollapsed]         = useState(() => {
-    return localStorage.getItem("yadomanagement-sidebar") === "collapsed";
+    return localStorage.getItem("yadomanagement-admin-sidebar") === "collapsed";
   });
 
   useEffect(() => {
-    localStorage.setItem("yadomanagement-sidebar", collapsed ? "collapsed" : "expanded");
+    localStorage.setItem("yadomanagement-admin-sidebar", collapsed ? "collapsed" : "expanded");
   }, [collapsed]);
 
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="dashboard flex h-screen overflow-hidden font-sans">
+    <div className="flex h-screen overflow-hidden font-sans">
 
       {/* ANIMATED GRADIENT MESH BACKGROUND */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
@@ -302,18 +274,6 @@ const DashboardLayoutInner = () => {
                   <SelectItem value="agoda" className="text-xs rounded-lg">Agoda</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Select>
-                <SelectTrigger className="h-9 text-xs w-40 glass-filter-btn rounded-xl border-0">
-                  <SelectValue placeholder="Resort: All" />
-                </SelectTrigger>
-                <SelectContent className="glass-dropdown rounded-xl border-white/30">
-                  <SelectItem value="all" className="text-xs rounded-lg">Resort: All</SelectItem>
-                  {RESORTS.map(r => (
-                    <SelectItem key={r.name} value={r.name} className="text-xs rounded-lg">{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           )}
 
@@ -325,8 +285,8 @@ const DashboardLayoutInner = () => {
   );
 };
 
-export const DashboardLayout = () => (
+export const SuperadminLayout = () => (
   <ThemeProvider>
-    <DashboardLayoutInner />
+    <SuperadminLayoutInner />
   </ThemeProvider>
 );

@@ -42,7 +42,7 @@ export const Contact = () => {
             Get in Touch
           </h2>
           <p className="text-gray-600 text-base font-[Poppins] leading-relaxed mb-2!">
-            Interested in listing your property? Have questions about how YadoBooking works? We'd love to hear from you.
+            Interested in listing your property? Have questions about how YadoManagement works? We'd love to hear from you.
           </p>
 
           <div className="rounded-xl aspect-video overflow-hidden">

@@ -9,8 +9,8 @@ export const Footer = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
           {/* Col 1 - Brand */}
           <div className="space-y-3">
-            <h3 className="text-lg font-bold font-[Poppins]">YadoBooking</h3>
-            <p className="text-white/80 text-sm font-[Poppins]">Sync every stay, everywhere.</p>
+            <h3 className="text-lg font-bold font-[Poppins]">YadoManagement</h3>
+            <p className="text-white/80 text-sm font-[Poppins]">Manage every stay, everywhere.</p>
             <div className="flex items-center gap-3 pt-1">
               <a href="#" className="text-white/80 hover:text-white transition-colors" aria-label="Facebook">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" /></svg>
@@ -28,7 +28,7 @@ export const Footer = () => {
 
           {/* Col 2 - About */}
           <div className="space-y-3">
-            <h4 className="text-sm font-bold font-[Poppins] uppercase tracking-wider">About YadoBooking</h4>
+            <h4 className="text-sm font-bold font-[Poppins] uppercase tracking-wider">About YadoManagement</h4>
             <nav className="flex flex-col gap-2">
               {[
                 { label: "Home", id: "hero" },
@@ -70,8 +70,8 @@ export const Footer = () => {
 
         {/* Divider */}
         <div className="border-t border-white/20 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <p className="text-white/70 text-xs font-[Poppins]">&copy; 2026 YadoBooking. All rights reserved.</p>
-          <p className="text-white/70 text-xs font-[Poppins]">Built for accommodation owners across the Philippines.</p>
+          <p className="text-white/70 text-xs font-[Poppins]">&copy; 2026 YadoManagement. All rights reserved.</p>
+          <p className="text-white/70 text-xs font-[Poppins]">Built for accommodation owners everywhere.</p>
         </div>
       </div>
     </footer>

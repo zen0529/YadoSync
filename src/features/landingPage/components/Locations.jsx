@@ -29,10 +29,10 @@ export const Locations = () => {
           className="flex-1 space-y-6"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-gray-700! font-[Poppins]">
-            Serving Accommodations Across the Philippines
+           Built for Accommodations Everywhere
           </h2>
           <p className="text-gray-600 text-base font-[Poppins] mb-5!">
-            Starting with the country's most-visited destinations
+            From island resorts to mountain villas — if you take bookings, we can help.
           </p>
 
           <div className="flex flex-wrap gap-2">
@@ -47,8 +47,7 @@ export const Locations = () => {
           </div>
 
           <p className="text-gray-600 text-sm font-[Poppins] leading-relaxed italic">
-            Whether you run a beachfront resort, a mountain villa, or a cozy inn — if you're not online, you're missing bookings. We can change that.
-          </p>
+          Whether you run a beachfront resort, a mountain villa, or a cozy inn — if you're not connected to a channel manager yet, you're missing out on bookings every day. YadoManagement makes it simple, affordable, and commission-based.    </p>
 
           <motion.button
             whileHover={{ scale: 1.03 }}

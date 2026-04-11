@@ -27,7 +27,7 @@ export const Hero = () => {
             transition={{ duration: 0.4, delay: 0.1 }}
             className="text-4xl md:text-5xl font-extrabold text-gray-700! leading-tight font-[Poppins]"
           >
-            Sync Every Stay, Everywhere.
+            Manage Every Stay, Everywhere.
           </motion.h1>
 
           <motion.p
@@ -36,7 +36,7 @@ export const Hero = () => {
             transition={{ duration: 0.4, delay: 0.2 }}
             className="text-gray-600 text-base md:text-lg max-w-lg font-[Poppins] leading-relaxed"
           >
-            YadoBooking helps accommodation owners across the Philippines get listed and booked on major travel platforms — automatically and in real time.
+            YadoManagement helps accommodation owners get listed and booked on major travel platforms — automatically and in real time.
           </motion.p>
 
           <motion.div

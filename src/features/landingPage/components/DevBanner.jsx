@@ -24,7 +24,7 @@ export const DevBanner = () => {
           </h2>
 
           <p className="text-white/90 text-base font-[Poppins] leading-relaxed max-w-xl mx-auto">
-            YadoBooking is currently in active development. We are onboarding our first properties across the Philippines. If you'd like to be among the first accommodations we manage, reach out to us today.
+            YadoManagement is currently in active development. We are onboarding our first properties. If you'd like to be among the first accommodations we manage, reach out to us today.
           </p>
 
           <motion.button

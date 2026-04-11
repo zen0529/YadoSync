@@ -11,17 +11,48 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [fullName, setFullName] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(false);
+
+  const fetchUserRole = async (userId) => {
+    setRoleLoading(true);
+    try {
+      const { data: profile, error } = await supabase
+        .from("users")
+        .select("role, full_name")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Failed to fetch user role:", error.message);
+        return;
+      }
+
+      if (profile) {
+        setRole(profile.role);
+        setFullName(profile.full_name);
+      }
+    } catch (err) {
+      console.error("Error fetching user role:", err);
+    } finally {
+      setRoleLoading(false);
+    }
+  };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setUser(session?.user ?? null);
+        if (session?.user) {
+          setUser(session.user);
+          fetchUserRole(session.user.id);
+        } else {
+          setUser(null);
+          setRole(null);
+          setFullName(null);
+        }
+        setLoading(false);
       }
     );
 
@@ -48,12 +79,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
+    document.documentElement.classList.remove("dark");
+    localStorage.removeItem("yadomanagement-theme");
     const { error } = await supabase.auth.signOut();
     return { error };
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, role, fullName, loading, roleLoading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

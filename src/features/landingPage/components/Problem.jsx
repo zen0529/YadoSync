@@ -1,19 +1,21 @@
 import { motion } from "framer-motion";
-import { EyeOff, Smartphone, AlertTriangle } from "lucide-react";
+import unlistedImg from "@/features/landingPage/assets/problems/unlisted.png";
+import manualImg from "@/features/landingPage/assets/problems/manual.png";
+import riskImg from "@/features/landingPage/assets/problems/risk.png";
 
 const PROBLEMS = [
   {
-    icon: EyeOff,
+    image: unlistedImg,
     title: "Unlisted & Undiscovered",
     description: "Small resorts, inns, and villas have no presence on any online booking platform.",
   },
   {
-    icon: Smartphone,
+    image: manualImg,
     title: "Manual & Outdated",
     description: "Owners rely on walk-ins, Facebook, and word of mouth instead of automated bookings.",
   },
   {
-    icon: AlertTriangle,
+    image: riskImg,
     title: "Overbooking Risk",
     description: "Managing multiple platforms by hand leads to double bookings and lost trust.",
   },
@@ -21,26 +23,28 @@ const PROBLEMS = [
 
 export const Problem = () => {
   return (
-    <section className="bg-[#f8f8f8] py-20 px-6">
+    <section className="bg-[#f8f8f8] pb-20 pt-20 px-6">
       <div className="max-w-7xl mx-auto text-center">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-          className="text-3xl md:text-4xl font-bold text-[#1a4a5c] font-[Poppins] mb-3"
-        >
-          The Problem
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="text-gray-600 mb-10! text-base md:text-lg font-[Poppins] mx-auto mb-12 text-center!"
-        >
-          Hundreds of accommodations across the Philippines are missing out on bookings every day.
-        </motion.p>
+        <div className="flex flex-col items-center mb-12">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            className="text-3xl md:text-4xl font-bold text-[#1a4a5c] font-[Poppins] mb-8!"
+          >
+            Why Accommodations Are Losing Bookings
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="text-gray-600 text-base md:text-lg font-[Poppins] max-w-2xl text-center"
+          >
+            Hundreds of resorts, inns, and villas are missing out on bookings every day — not because they lack quality, but because they lack the right tools.
+          </motion.p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PROBLEMS.map((problem, i) => (
@@ -52,8 +56,8 @@ export const Problem = () => {
               transition={{ duration: 0.4, delay: i * 0.1 }}
               className="bg-white rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center mx-auto mb-5">
-                <problem.icon className="w-6 h-6 text-[#3aab4a]" />
+              <div className="w-40 h-40 flex items-center justify-center mx-auto mb-5">
+                <img src={problem.image} alt={problem.title} className="w-40 h-40 object-contain" />
               </div>
               <h3 className="text-lg font-bold text-[#1a4a5c] font-[Poppins] mb-2">{problem.title}</h3>
               <p className="text-gray-600 text-sm font-[Poppins] leading-relaxed">{problem.description}</p>

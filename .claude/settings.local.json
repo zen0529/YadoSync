@@ -4,7 +4,10 @@
       "Bash(npx vite:*)",
       "Bash(npm install:*)",
       "Bash(npm ls:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npx shadcn@latest add switch alert-dialog)",
+      "Bash(npx shadcn@latest add switch alert-dialog --overwrite)",
+      "Bash(find /c/Users/SEJI/YadoSync/src/components -type f \\\\\\(-name *.jsx -o -name *.js \\\\\\))"
     ]
   }
 }

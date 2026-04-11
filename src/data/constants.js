@@ -17,4 +17,4 @@ export const RESORTS = [
 
 export const PLATFORM_LABELS = { klook: "Klook", booking: "Booking.com", agoda: "Agoda" };
 
-export const TIMEFRAMES = ["All-time","Hourly","Daily","Weekly","Monthly"];
+export const TIMEFRAMES = ["All-time","Today","This week","This month","Last 30 days"];

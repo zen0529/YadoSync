@@ -5,18 +5,18 @@ import { ListPlus, RefreshCw, Bell } from "lucide-react";
 const STEPS = [
   {
     icon: ListPlus,
-    title: "We List Your Property",
-    description: "We register your accommodation on Booking.com, Agoda, Airbnb, Traveloka and more on your behalf.",
+    title: "You List Your Property",
+    description: "You register your accommodation on Booking.com, Agoda, Airbnb, etc. and connect it to our system.",
   },
   {
     icon: RefreshCw,
     title: "We Sync in Real Time",
-    description: "When a booking comes in from any platform, we block those dates everywhere else instantly — no overbooking.",
+    description: "When a booking comes in from any platform, we automatically block those dates everywhere else instantly — no overbooking, no manual work",
   },
   {
     icon: Bell,
     title: "You Get Notified",
-    description: "You receive an SMS and email the moment a booking is confirmed. No extra tools needed.",
+    description: "You receive an SMS and email the moment a booking is confirmed. We handle the sync — you just welcome your guests.",
   },
 ];
 
@@ -31,7 +31,7 @@ export const HowItWorks = () => {
           transition={{ duration: 0.4 }}
           className="text-3xl md:text-4xl mb-5! font-bold text-gray-700! font-[Poppins] mb-3"
         >
-          How YadoBooking Works
+          How YadoManagement Works
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -40,7 +40,7 @@ export const HowItWorks = () => {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="text-gray-600 mb-10! text-base md:text-lg font-[Poppins] mx-auto mb-14 text-center!"
         >
-          We handle everything from listing to booking sync — so you don't have to.
+          You manage your listings. We handle the sync — automatically and in real time.
         </motion.p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">

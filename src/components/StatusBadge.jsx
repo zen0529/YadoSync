@@ -6,7 +6,7 @@ const statusClass = {
 };
 
 export const StatusBadge = ({ status }) => (
-  <Badge className={`text-xs font-semibold ${statusClass[status]}`}>
+  <Badge role="status" aria-label={`Property status: ${status}`} className={`text-xs font-semibold ${statusClass[status]}`}>
     {status.charAt(0).toUpperCase() + status.slice(1)}
   </Badge>
 );

@@ -41,7 +41,7 @@ export const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-[#e8e8e8] font-sans">
       <Card className="w-full max-w-sm border border-black/5 shadow-sm">
         <CardHeader className="text-center pb-2">
-          <p className="text-2xl font-extrabold text-green-600 tracking-wide mb-1">YadoBooking</p>
+          <p className="text-2xl font-extrabold text-green-600 tracking-wide mb-1">YadoManagement</p>
           <CardTitle className="text-sm font-medium text-muted-foreground">
             {isSignUp ? "Create your account" : "Sign in to your account"}
           </CardTitle>
@@ -88,7 +88,7 @@ export const LoginPage = () => {
             </Button>
           </form>
 
-          <p className="text-xs text-center text-muted-foreground mt-4">
+          {/* <p className="text-xs text-center text-muted-foreground mt-4">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
             <button
               type="button"
@@ -97,7 +97,7 @@ export const LoginPage = () => {
             >
               {isSignUp ? "Sign In" : "Sign Up"}
             </button>
-          </p>
+          </p> */}
         </CardContent>
       </Card>
     </div>
