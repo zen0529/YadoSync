@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getProperties } from "../queries";
-import { AddResortModal } from "../modals/AddResortModal";
-import { ResortDetailModal } from "../modals/ResortDetailModal";
+import { AddResortModal } from "./AddResortModal";
+import { ResortDetailModal } from "./ResortDetailModal";
 import { Building2, Plus, Loader2 } from "lucide-react";
 
 export const ResortsPage = () => {

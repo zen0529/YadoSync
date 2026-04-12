@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { SyncBadge } from "@/components/SyncBadge";
-import { MetricCard } from "../components/MetricCard";
+import { MetricCard } from "../../components/MetricCard";
+import { BookingCalendar } from "../components/BookingCalendar";
+import { BookingDayModal } from "../components/BookingDayModal";
 import { BOOKINGS } from "@/data/constants";
 import { ACTIVITY_BARS } from "../data/constants";
+import { DEMO_BOOKINGS_BY_DATE, DEMO_TOTAL_ROOMS } from "../data/constants";
 import {
   ArrowRight,
   TrendingUp,
@@ -19,18 +23,32 @@ const PLATFORMS = [
   { label: "Agoda",       n: 5,  pct: 21, color: "from-violet-400 to-purple-500", bg: "bg-violet-500", bar: "#8b5cf6" },
 ];
 
-export const DashboardPage = () => (
+export const DashboardPage = () => {
+  const [panelDate, setPanelDate] = useState(null);
+  const [panelBookings, setPanelBookings] = useState([]);
+
+  const handleDateClick = (date, bookings) => {
+    setPanelDate(date);
+    setPanelBookings(bookings);
+  };
+
+  const handlePanelClose = () => {
+    setPanelDate(null);
+    setPanelBookings([]);
+  };
+
+  return (
   <>
     {/* METRIC CARDS */}
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
       <MetricCard label="Total Bookings"     value="24"      trend="↑ +3 this week"        sparkKey="bookings" />
-      <MetricCard label="Active Resorts"     value="6"       trend="3 platforms connected"  sparkKey="resorts"  />
+      <MetricCard label="Today's Occupancy"     value="85%"       trend="+5% from yesterday"  sparkKey="resorts"  />
       <MetricCard label="Commission (March)" value="₱18,400" trend="↑ from ₱14,200"        sparkKey="earnings" />
-      <MetricCard label="Pending Sync"       value="2"       trend="Needs attention" warn sparkKey="pending"  />
+      <MetricCard label="Pending Bookings"       value="2"       trend="↑ +1 today" warn sparkKey="pending"  />
     </div>
 
-    {/* BOTTOM GRID */}
-    <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4">
+    {/* MAIN GRID — Recent Bookings + Calendar */}
+    <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 mb-4">
 
       {/* RECENT BOOKINGS — frosted glass */}
       <div className="glass-card rounded-2xl overflow-hidden">
@@ -77,9 +95,22 @@ export const DashboardPage = () => (
         </div>
       </div>
 
-      {/* PLATFORM BREAKDOWN + ACTIVITY — frosted glass */}
+      {/* BOOKING CALENDAR */}
+      <div className="min-h-0">
+        <BookingCalendar
+          bookingsByDate={DEMO_BOOKINGS_BY_DATE}
+          totalRooms={DEMO_TOTAL_ROOMS}
+          month={3}
+          year={2026}
+          onDateClick={handleDateClick}
+        />
+      </div>
+    </div>
+
+    {/* PLATFORM BREAKDOWN + ACTIVITY */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* PLATFORM BREAKDOWN — frosted glass */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        {/* Platform Breakdown */}
         <div className="px-5 py-4 border-b border-white/20">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
@@ -111,8 +142,10 @@ export const DashboardPage = () => (
             <span className="text-sm font-bold text-foreground/80">24 bookings</span>
           </div>
         </div>
+      </div>
 
-        {/* Activity Chart */}
+      {/* ACTIVITY CHART — frosted glass */}
+      <div className="glass-card rounded-2xl overflow-hidden">
         <div className="px-5 py-4">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-2">
@@ -156,5 +189,15 @@ export const DashboardPage = () => (
         </div>
       </div>
     </div>
+
+    {/* BOOKING DAY PANEL */}
+    {panelDate && (
+      <BookingDayModal
+        date={panelDate}
+        bookings={panelBookings}
+        onClose={handlePanelClose}
+      />
+    )}
   </>
-);
+  );
+};

@@ -35,35 +35,53 @@ YadoManagement/
 │   ├── data/
 │   │   └── constants.js
 │   ├── features/
-│   │   ├── auth/
+│   │   ├── auth/                        # Shared — login, signup, auth context
 │   │   │   ├── LoginPage.jsx
 │   │   │   ├── SignupPage.jsx
 │   │   │   └── context/
-│   │   │       └── AuthContext.jsx  # Supabase auth provider + useAuth hook + role detection
-│   │   ├── bookings/
-│   │   │   ├── pages/BookingsPage.jsx
-│   │   │   ├── queries/index.js
-│   │   │   ├── modals/
-│   │   │   ├── hooks/
-│   │   │   └── components/
-│   │   ├── dashboard/
-│   │   │   ├── pages/DashboardPage.jsx
-│   │   │   └── components/
-│   │   │       ├── MetricCard.jsx
-│   │   │       └── Sparkline.jsx
-│   │   ├── earnings/
-│   │   │   ├── pages/EarningsPage.jsx
-│   │   │   ├── queries/index.js
-│   │   │   └── hooks/
-│   │   ├── properties/
-│   │   │   ├── pages/PropertiesPage.jsx
-│   │   │   ├── modals/
-│   │   │   │   ├── AddPropertyModal.jsx
-│   │   │   │   └── PropertyDetailModal.jsx
-│   │   │   ├── queries/index.js
-│   │   │   └── hooks/
-│   │   └── settings/
-│   │       └── pages/SettingsPage.jsx
+│   │   │       └── AuthContext.jsx
+│   │   ├── property-owner/              # All property owner features
+│   │   │   ├── components/              # Shared across PO features
+│   │   │   │   ├── MetricCard.jsx
+│   │   │   │   └── Sparkline.jsx
+│   │   │   ├── dashboard/
+│   │   │   │   ├── ui/DashboardPage.jsx
+│   │   │   │   ├── components/ hooks/ utils/ queries/
+│   │   │   │   └── data/constants.js
+│   │   │   ├── bookings/
+│   │   │   │   ├── ui/BookingsPage.jsx
+│   │   │   │   ├── components/ hooks/ utils/
+│   │   │   │   ├── data/constants.js
+│   │   │   │   └── queries/index.js
+│   │   │   ├── resorts/
+│   │   │   │   ├── ui/ResortsPage.jsx, AddResortModal.jsx, ResortDetailModal.jsx
+│   │   │   │   ├── components/ hooks/ data/ utils/
+│   │   │   │   └── queries/index.js
+│   │   │   └── earnings/
+│   │   │       ├── ui/EarningsPage.jsx
+│   │   │       ├── components/ hooks/ utils/ queries/
+│   │   │       └── data/constants.js
+│   │   ├── superadmin/                  # All superadmin features
+│   │   │   ├── components/              # Shared across SA features
+│   │   │   ├── overview/
+│   │   │   │   ├── ui/AdminOverviewPage.jsx
+│   │   │   │   ├── components/ hooks/ data/ utils/
+│   │   │   │   └── queries/index.js
+│   │   │   ├── properties/
+│   │   │   │   ├── ui/AdminPropertiesPage.jsx
+│   │   │   │   ├── components/ hooks/ data/ utils/
+│   │   │   │   └── queries/index.js
+│   │   │   ├── bookings/
+│   │   │   │   ├── ui/AdminBookingsPage.jsx
+│   │   │   │   ├── components/ hooks/ data/ utils/
+│   │   │   │   └── queries/index.js
+│   │   │   └── earnings/
+│   │   │       ├── ui/AdminEarningsPage.jsx
+│   │   │       ├── components/ hooks/ data/ utils/
+│   │   │       └── queries/index.js
+│   │   ├── settings/                    # Shared — both roles
+│   │   │   └── pages/SettingsPage.jsx
+│   │   └── landingPage/                 # Public — no auth required
 │   ├── layouts/
 │   │   ├── DashboardLayout.jsx      # Sidebar + topbar + <Outlet />
 │   │   └── SuperadminLayout.jsx     # Superadmin-specific layout if needed

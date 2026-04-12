@@ -5,15 +5,15 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SuperadminRoute } from "@/components/SuperadminRoute";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { SuperadminLayout } from "@/layouts/SuperadminLayout";
-import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
-import { BookingsPage } from "@/features/bookings/pages/BookingsPage";
-import { ResortsPage } from "@/features/resorts/pages/ResortsPage";
-import { EarningsPage } from "@/features/earnings/pages/EarningsPage";
+import { DashboardPage } from "@/features/property-owner/dashboard/ui/DashboardPage";
+import { BookingsPage } from "@/features/property-owner/bookings/ui/BookingsPage";
+import { ResortsPage } from "@/features/property-owner/resorts/ui/ResortsPage";
+import { EarningsPage } from "@/features/property-owner/earnings/ui/EarningsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
-import { AdminOverviewPage } from "@/features/admin/pages/AdminOverviewPage";
-import { AdminPropertiesPage } from "@/features/admin/pages/AdminPropertiesPage";
-import { AdminBookingsPage } from "@/features/admin/pages/AdminBookingsPage";
-import { AdminEarningsPage } from "@/features/admin/pages/AdminEarningsPage";
+import { AdminOverviewPage } from "@/features/superadmin/overview/ui/AdminOverviewPage";
+import { AdminPropertiesPage } from "@/features/superadmin/properties/ui/AdminPropertiesPage";
+import { AdminBookingsPage } from "@/features/superadmin/bookings/ui/AdminBookingsPage";
+import { AdminEarningsPage } from "@/features/superadmin/earnings/ui/AdminEarningsPage";
 import LandingPage from "@/features/landingPage/LandingPage";
 
 const AuthRedirect = ({ children }) => {

@@ -1,5 +1,5 @@
 import { PlatformBadge } from "@/components/PlatformBadge";
-import { MetricCard } from "@/features/dashboard/components/MetricCard";
+import { MetricCard } from "../../components/MetricCard";
 import { EARNINGS_PER_RESORT, EARNINGS_PER_BOOKING } from "../data/constants";
 import {
   User,

@@ -37,7 +37,7 @@ import {
 const NAV_ITEMS = [
   { id: "overview",  label: "Overview",  icon: LayoutGrid },
   { id: "bookings",  label: "Bookings",  icon: CalendarCheck },
-  { id: "resorts",   label: "Resorts",   icon: Building2 },
+  // { id: "resorts",   label: "Resorts",   icon: Building2 },
   { id: "earnings",  label: "Earnings",  icon: Coins },
 ];
 
@@ -52,11 +52,11 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
         {collapsed ? (
           <img src={yadoLogo} alt="YadoManagement" className="w-8 h-10 mx-auto" />
         ) : (
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 ">
             <img src={yadoLogo} alt="" className="w-8 h-10 shrink-0" aria-hidden="true" />
-            <div>
-              <p className="text-lg font-extrabold text-white tracking-wide">YadoManagement</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">Channel Manager</p>
+            <div >
+              <p className="pt-3 text-[15px] font-extrabold text-white tracking-wide leading-none">YadoManagement</p>
+              <p className="text-[10px] text-white/50 uppercase tracking-wider">Channel Manager</p>
             </div>
           </div>
         )}
