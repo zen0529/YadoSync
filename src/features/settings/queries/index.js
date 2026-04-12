@@ -53,3 +53,30 @@ export const signOutAllSessions = async () => {
   const { error } = await supabase.auth.signOut({ scope: "global" });
   if (error) throw error;
 };
+
+export const fetchMyProperty = async (userId) => {
+  const { data, error } = await supabase
+    .from("properties")
+    .select("name, location, owner_name, owner_email, owner_phone")
+    .eq("user_id", userId)
+    .single();
+  if (error && error.code !== "PGRST116") throw error;
+  return data || null;
+};
+
+export const updateMyProperty = async (userId, { name, location, ownerName, ownerEmail, ownerPhone }) => {
+  const { data, error } = await supabase
+    .from("properties")
+    .update({
+      name,
+      location,
+      owner_name: ownerName,
+      owner_email: ownerEmail,
+      owner_phone: ownerPhone,
+    })
+    .eq("user_id", userId)
+    .select("name, location, owner_name, owner_email, owner_phone")
+    .single();
+  if (error) throw error;
+  return data;
+};
