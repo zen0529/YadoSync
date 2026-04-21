@@ -64,6 +64,32 @@ export const fetchMyProperty = async (userId) => {
   return data || null;
 };
 
+export const addMyProperty = async (userId, { name, propertyType, currency, address, city, state, country, postcode, ownerName, ownerEmail, ownerPhone, beds24PropertyId, beds24Name }) => {
+  const { data, error } = await supabase
+    .from("properties")
+    .insert({
+      user_id: userId,
+      name,
+      property_type: propertyType,
+      currency,
+      location: address,
+      city,
+      state,
+      country,
+      postcode,
+      owner_name: ownerName,
+      owner_email: ownerEmail,
+      owner_phone: ownerPhone,
+      beds24_property_id: beds24PropertyId,
+      beds24_name: beds24Name,
+      status: "setup",
+    })
+    .select("name, location, owner_name, owner_email, owner_phone")
+    .single();
+  if (error) throw error;
+  return data;
+};
+
 export const updateMyProperty = async (userId, { name, location, ownerName, ownerEmail, ownerPhone }) => {
   const { data, error } = await supabase
     .from("properties")

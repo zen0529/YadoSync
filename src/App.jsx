@@ -9,6 +9,7 @@ import { DashboardPage } from "@/features/property-owner/dashboard/ui/DashboardP
 import { BookingsPage } from "@/features/property-owner/bookings/ui/BookingsPage";
 import { ResortsPage } from "@/features/property-owner/resorts/ui/ResortsPage";
 import { EarningsPage } from "@/features/property-owner/earnings/ui/EarningsPage";
+import ConnectionsPage from "@/features/property-owner/connections/ui/ConnectionsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { AdminOverviewPage } from "@/features/superadmin/overview/ui/AdminOverviewPage";
 import { AdminPropertiesPage } from "@/features/superadmin/properties/ui/AdminPropertiesPage";
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="bookings" element={<BookingsPage />} />
             <Route path="resorts" element={<ResortsPage />} />
             <Route path="earnings" element={<EarningsPage />} />
+            <Route path="connections" element={<ConnectionsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

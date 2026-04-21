@@ -11,8 +11,10 @@ import {
   AlertTriangle,
   Pencil,
   X,
+  Plus,
 } from "lucide-react";
 import { fetchMyProperty, updateMyProperty } from "../../queries";
+import { AddPropertyModal } from "./AddPropertyModal";
 
 const Alert = ({ type, message, onDismiss }) => {
   if (!message) return null;
@@ -79,6 +81,7 @@ export const MyPropertySection = ({ userId }) => {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [alert, setAlert] = useState({ type: "", message: "" });
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -142,11 +145,27 @@ export const MyPropertySection = ({ userId }) => {
               <Building2 className="w-7 h-7 text-green-500/50" />
             </div>
             <p className="text-base font-semibold text-foreground/60 mb-1">No property found</p>
-            <p className="text-sm text-muted-foreground/60 text-center max-w-xs">
-              You don't have a property linked to your account yet. Add one from the Resorts page.
+            <p className="text-sm text-muted-foreground/60 text-center max-w-xs mb-5">
+              You don't have a property linked to your account yet.
             </p>
+            <Button
+              onClick={() => setShowAddModal(true)}
+              className="bg-green-500/90 hover:bg-green-600 text-white text-sm h-9 px-5 rounded-lg shadow-md shadow-green-500/20"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Add Property
+            </Button>
           </div>
         </div>
+        <AddPropertyModal
+          open={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          userId={userId}
+          onSaved={(result) => {
+            setProperty(result);
+            setForm(mapToForm(result));
+          }}
+        />
       </div>
     );
   }

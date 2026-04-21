@@ -16,12 +16,14 @@ import {
 import { RESORTS, TIMEFRAMES } from "@/data/constants";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { supabase } from "@/lib/supabase";
 import yadoLogo from "@/assets/logoWhite.png";
 import {
   LayoutGrid,
   CalendarCheck,
   Building2,
   Coins,
+  Globe,
   Settings,
   LogOut,
   Download,
@@ -35,14 +37,15 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { id: "overview",  label: "Overview",  icon: LayoutGrid },
-  { id: "bookings",  label: "Bookings",  icon: CalendarCheck },
-  // { id: "resorts",   label: "Resorts",   icon: Building2 },
-  { id: "earnings",  label: "Earnings",  icon: Coins },
+  { id: "overview",     label: "Overview",     icon: LayoutGrid },
+  { id: "bookings",     label: "Bookings",     icon: CalendarCheck },
+  // { id: "resorts",   label: "Resorts",      icon: Building2 },
+  { id: "earnings",     label: "Earnings",     icon: Coins },
+  { id: "connections",  label: "Connections",  icon: Globe },
 ];
 
 
-const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) => {
+const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut, connectionCount }) => {
   const { dark, toggle } = useTheme();
 
   return (
@@ -86,6 +89,11 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
                   : "text-white/60 hover:bg-white/10 hover:text-white"}`}>
               <Icon className="w-4 h-4 shrink-0" />
               {!collapsed && n.label}
+              {!collapsed && n.id === "connections" && connectionCount > 0 && (
+                <span className="ml-auto w-4 h-4 rounded-full bg-green-500/90 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                  {connectionCount > 9 ? "9+" : connectionCount}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -158,6 +166,31 @@ const DashboardLayoutInner = () => {
   const location = useLocation();
   const page = location.pathname.split("/")[2] || "overview";
   const isSettingsPage = page === "settings";
+  const isConnectionsPage = page === "connections";
+  const isNoFiltersPage = isSettingsPage || isConnectionsPage;
+  const [connectionCount, setConnectionCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: prop } = await supabase
+          .from("properties")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!prop || cancelled) return;
+        const { count } = await supabase
+          .from("platform_connection")
+          .select("id", { count: "exact", head: true })
+          .eq("property_id", prop.id)
+          .eq("connection_status", "connected");
+        if (!cancelled) setConnectionCount(count || 0);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, page]);
   const [timeframe, setTimeframe]         = useState("All-time");
   const [showDateRange, setShowDateRange] = useState(false);
   const [dateFrom, setDateFrom]           = useState("");
@@ -208,6 +241,7 @@ const DashboardLayoutInner = () => {
           closeSidebar={closeSidebar}
           username={username}
           signOut={signOut}
+          connectionCount={connectionCount}
         />
       </aside>
 
@@ -240,7 +274,7 @@ const DashboardLayoutInner = () => {
               {NAV_ITEMS.find(n => n.id === page)?.label || (page === "settings" ? "Settings" : "")}
             </h3>
           </div>
-          {!isSettingsPage && (
+          {!isNoFiltersPage && (
             <div className="flex items-center gap-2.5">
               <span className="text-xs text-muted-foreground/70 hidden sm:inline">{timeframe}</span>
               <Button size="sm" className="bg-green-500/90 hover:bg-green-600 text-white h-8 text-xs rounded-lg shadow-md shadow-green-500/20 backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30">
@@ -254,7 +288,7 @@ const DashboardLayoutInner = () => {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6" aria-label="Page content">
 
           {/* FILTERS — frosted glass pill bar */}
-          {!isSettingsPage && (
+          {!isNoFiltersPage && (
             <div className="flex items-center gap-2 mb-6 flex-wrap">
               <div className="flex glass-filter-bar rounded-xl overflow-hidden overflow-x-auto" role="group" aria-label="Timeframe filter">
                 {TIMEFRAMES.map((t, i) => (
