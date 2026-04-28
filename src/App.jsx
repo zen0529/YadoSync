@@ -8,13 +8,16 @@ import { SuperadminLayout } from "@/layouts/SuperadminLayout";
 import { DashboardPage } from "@/features/property-owner/dashboard/ui/DashboardPage";
 import { BookingsPage } from "@/features/property-owner/bookings/ui/BookingsPage";
 import { ResortsPage } from "@/features/property-owner/resorts/ui/ResortsPage";
-import { EarningsPage } from "@/features/property-owner/earnings/ui/EarningsPage";
+import { AnalyticsPage } from "@/features/property-owner/analytics/ui/AnalyticsPage";
+import { RatesPage } from "@/features/property-owner/rates/ui/RatesPage";
+import { InventoryPage } from "@/features/property-owner/inventory/ui/InventoryPage";
+import { InboxPage } from "@/features/property-owner/inbox/ui/InboxPage";
 import ConnectionsPage from "@/features/property-owner/connections/ui/ConnectionsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { AdminOverviewPage } from "@/features/superadmin/overview/ui/AdminOverviewPage";
 import { AdminPropertiesPage } from "@/features/superadmin/properties/ui/AdminPropertiesPage";
-import { AdminBookingsPage } from "@/features/superadmin/bookings/ui/AdminBookingsPage";
-import { AdminEarningsPage } from "@/features/superadmin/earnings/ui/AdminEarningsPage";
+import { BillingPage } from "@/features/superadmin/billing/ui/BillingPage";
+import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage";
 import LandingPage from "@/features/landingPage/LandingPage";
 
 const AuthRedirect = ({ children }) => {
@@ -66,8 +69,11 @@ export default function App() {
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<DashboardPage />} />
             <Route path="bookings" element={<BookingsPage />} />
+            <Route path="inbox" element={<InboxPage />} />
             <Route path="resorts" element={<ResortsPage />} />
-            <Route path="earnings" element={<EarningsPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="rates" element={<RatesPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="connections" element={<ConnectionsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
@@ -84,8 +90,8 @@ export default function App() {
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<AdminOverviewPage />} />
             <Route path="properties" element={<AdminPropertiesPage />} />
-            <Route path="bookings" element={<AdminBookingsPage />} />
-            <Route path="earnings" element={<AdminEarningsPage />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="logs" element={<SystemLogsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

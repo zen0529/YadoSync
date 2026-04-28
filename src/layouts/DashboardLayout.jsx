@@ -34,13 +34,19 @@ import {
   PanelLeftOpen,
   Moon,
   Sun,
+  TrendingUp,
+  BedDouble,
+  MessageSquare,
+  BarChart3,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "overview",     label: "Overview",     icon: LayoutGrid },
+  { id: "inbox",        label: "Inbox",        icon: MessageSquare },
   { id: "bookings",     label: "Bookings",     icon: CalendarCheck },
-  // { id: "resorts",   label: "Resorts",      icon: Building2 },
-  { id: "earnings",     label: "Earnings",     icon: Coins },
+  { id: "inventory",    label: "Inventory",    icon: BedDouble },
+  { id: "rates",        label: "Rates & Yield",icon: TrendingUp },
+  { id: "analytics",    label: "Analytics & Reports", icon: BarChart3 },
   { id: "connections",  label: "Connections",  icon: Globe },
 ];
 
@@ -167,7 +173,11 @@ const DashboardLayoutInner = () => {
   const page = location.pathname.split("/")[2] || "overview";
   const isSettingsPage = page === "settings";
   const isConnectionsPage = page === "connections";
-  const isNoFiltersPage = isSettingsPage || isConnectionsPage;
+  const isRatesPage = page === "rates";
+  const isInventoryPage = page === "inventory";
+  const isInboxPage = page === "inbox";
+  const isAnalyticsPage = page === "analytics";
+  const isNoFiltersPage = isSettingsPage || isConnectionsPage || isRatesPage || isInventoryPage || isInboxPage || isAnalyticsPage;
   const [connectionCount, setConnectionCount] = useState(0);
 
   useEffect(() => {

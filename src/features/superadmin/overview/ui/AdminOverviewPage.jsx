@@ -6,21 +6,62 @@ import { getAdminStats, getAllBookings } from "../queries";
 import {
   ArrowRight,
   TrendingUp,
-  User,
   Building2,
   Globe,
   RefreshCw,
   Coins,
-  Users,
-  CalendarCheck,
-  Loader2,
+  AlertCircle,
+  AlertTriangle,
+  TrendingDown,
+  Info
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar
+} from "recharts";
+import { Loader2, ArrowUpRight, User, Users, CalendarCheck } from "lucide-react";
+import { MOCK_SUPERADMIN_EARNINGS, MOCK_SUPERADMIN_PROPERTY_BREAKDOWN, MOCK_SUPERADMIN_ALERTS } from "@/data/constants";
 
 const PLATFORMS = [
   { key: "klook",   label: "Klook",       color: "#22c55e" },
   { key: "booking", label: "Booking.com", color: "#3b82f6" },
   { key: "agoda",   label: "Agoda",       color: "#8b5cf6" },
 ];
+
+const ALERT_ICONS = {
+  error: <AlertCircle className="w-5 h-5 text-red-500" />,
+  warning: <AlertTriangle className="w-5 h-5 text-amber-500" />,
+  info: <Info className="w-5 h-5 text-blue-500" />
+};
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-background/90 backdrop-blur-md border border-white/20 p-3 rounded-xl shadow-xl">
+        <p className="text-sm font-bold text-foreground mb-1">{label}</p>
+        <p className="text-xs text-green-500 font-semibold flex items-center justify-between gap-4">
+          <span>{payload[0].name}:</span>
+          <span>
+            {payload[0].name === "Earnings" || payload[0].name === "Commission" || payload[0].name === "Revenue" 
+              ? `₱${payload[0].value.toLocaleString()}` 
+              : payload[0].value}
+          </span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 const StatCard = ({ icon: Icon, gradient, shadow, label, value }) => (
   <div className="glass-card rounded-2xl p-5 group hover:bg-white/50 transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5">
@@ -70,104 +111,152 @@ export const AdminOverviewPage = () => {
 
   const platformCounts = PLATFORMS.map((p) => {
     const count = bookings.filter((b) => b.platform === p.key).length;
-    return { ...p, count, pct: bookings.length ? Math.round((count / bookings.length) * 100) : 0 };
+    return { name: p.label, value: count, fill: p.color };
   });
 
   return (
-    <>
-      {/* STAT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-        <StatCard icon={Building2} gradient="from-blue-400 to-indigo-500" shadow="shadow-blue-500/20" label="Total Properties" value={stats?.totalProperties ?? 0} />
-        <StatCard icon={CalendarCheck} gradient="from-green-400 to-emerald-500" shadow="shadow-green-500/20" label="Total Bookings" value={stats?.totalBookings ?? 0} />
-        <StatCard icon={Coins} gradient="from-amber-400 to-orange-500" shadow="shadow-amber-500/20" label="Total Commission" value={`₱${totalCommission.toLocaleString()}`} />
-        <StatCard icon={Users} gradient="from-violet-400 to-purple-500" shadow="shadow-violet-500/20" label="Active Owners" value={stats?.totalOwners ?? 0} />
+    <div className="flex flex-col gap-5 pb-6">
+      
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+        <div>
+          <h2 className="text-lg font-bold text-foreground leading-tight">Good Morning, Superadmin</h2>
+          <p className="text-xs text-muted-foreground">Here is the platform-wide performance across all properties.</p>
+        </div>
       </div>
 
-      {/* BOTTOM GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4">
+      {/* STAT CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard icon={Building2} gradient="from-blue-400 to-indigo-500" shadow="shadow-blue-500/20" label="Active Properties" value={stats?.totalProperties ?? 0} />
+        <StatCard icon={TrendingDown} gradient="from-zinc-400 to-slate-500" shadow="shadow-slate-500/20" label="Churned Properties" value={2} />
+        <StatCard icon={AlertCircle} gradient="from-rose-400 to-red-500" shadow="shadow-rose-500/20" label="Overdue Accounts" value={1} />
+        <StatCard icon={Coins} gradient="from-amber-400 to-orange-500" shadow="shadow-amber-500/20" label="Total Commission" value={`₱${totalCommission.toLocaleString()}`} />
+      </div>
 
-        {/* RECENT BOOKINGS */}
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 flex items-center justify-between border-b border-white/20">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-md shadow-green-500/20">
-                <TrendingUp className="w-3.5 h-3.5 text-white" />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground/85">Recent Bookings</h3>
+      {/* MIDDLE ROW: CHARTS */}
+      <div className="grid grid-cols-1 gap-4">
+        
+        {/* Earnings Over Time Chart */}
+        <div className="glass-card rounded-2xl p-5 border border-white/20 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground/85">Platform Commission Growth</h3>
+              <p className="text-[10px] text-muted-foreground/60">Earnings over the last 7 days</p>
             </div>
-            <Link
-              to="/admin/bookings"
-              className="text-xs text-green-600/80 font-medium hover:text-green-700 transition-colors flex items-center gap-1 group"
-            >
-              View all
-              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 text-green-500 border border-green-500/20">
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold">+18%</span>
+            </div>
           </div>
-
-          <div className="divide-y divide-white/15">
-            <div className="grid grid-cols-[1fr_1fr_0.8fr_auto_auto] gap-3 px-5 py-2.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
-              <div className="flex items-center gap-1.5"><User className="w-3 h-3" /> Guest</div>
-              <div className="flex items-center gap-1.5"><Building2 className="w-3 h-3" /> Property</div>
-              <div className="flex items-center gap-1.5"><Users className="w-3 h-3" /> Owner</div>
-              <div className="flex items-center gap-1.5"><Globe className="w-3 h-3" /> Platform</div>
-              <div className="flex items-center gap-1.5"><RefreshCw className="w-3 h-3" /> Sync</div>
-            </div>
-
-            {bookings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-sm text-muted-foreground/60">No bookings yet</p>
-              </div>
-            ) : (
-              bookings.slice(0, 8).map((b) => (
-                <div
-                  key={b.id}
-                  className="grid grid-cols-[1fr_1fr_0.8fr_auto_auto] gap-3 px-5 py-3.5 items-center hover:bg-white/20 transition-colors duration-200 cursor-default"
-                >
-                  <span className="text-sm font-medium text-foreground/85">{b.guest_name}</span>
-                  <span className="text-sm text-muted-foreground/70">{b.properties?.name || "—"}</span>
-                  <span className="text-sm text-muted-foreground/70">{b.properties?.owner_name || "—"}</span>
-                  <PlatformBadge platform={b.platform} />
-                  <SyncBadge sync={b.sync_status} />
-                </div>
-              ))
-            )}
+          
+          <div className="flex-1 min-h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={MOCK_SUPERADMIN_EARNINGS} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorCommission" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: "rgba(255,255,255,0.5)" }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: "rgba(255,255,255,0.5)" }}
+                  tickFormatter={(val) => `₱${val/1000}k`}
+                  width={45}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="earnings" 
+                  name="Commission"
+                  stroke="#f59e0b" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorCommission)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* PLATFORM BREAKDOWN */}
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/20">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
-                <Globe className="w-3.5 h-3.5 text-white" />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground/85">Platform Breakdown</h3>
-            </div>
+      </div>
 
-            <div className="space-y-3.5">
-              {platformCounts.map((p) => (
-                <div key={p.key}>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-muted-foreground/70 font-medium">{p.label}</span>
-                    <span className="font-semibold text-foreground/80">{p.count} <span className="text-muted-foreground/50 font-normal">bookings</span></span>
+      {/* BOTTOM ROW */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* PROPERTY BREAKDOWN (BAR CHART) */}
+        <div className="lg:col-span-2 glass-card rounded-2xl p-5 border border-white/20 flex flex-col">
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-foreground/85">Top Properties by Earnings</h3>
+            <p className="text-[10px] text-muted-foreground/60">Contribution to total commission</p>
+          </div>
+          
+          <div className="flex-1 min-h-[220px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={MOCK_SUPERADMIN_PROPERTY_BREAKDOWN} layout="vertical" margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.1)" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.5)" }} tickFormatter={(val) => `${val}%`} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.8)" }} width={100} />
+                <Tooltip 
+                  cursor={{fill: "rgba(255,255,255,0.05)"}}
+                  contentStyle={{ backgroundColor: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }}
+                  itemStyle={{ color: "#fff", fontSize: "12px", fontWeight: "bold" }}
+                  formatter={(value) => [`${value}%`, "Share"]}
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                  {MOCK_SUPERADMIN_PROPERTY_BREAKDOWN.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* SYSTEM HEALTH / ACTION CENTER */}
+        <div className="glass-card rounded-2xl flex flex-col overflow-hidden border border-white/20">
+          <div className="px-5 py-4 border-b border-white/20 flex justify-between items-center bg-white/5">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-400 to-red-500 flex items-center justify-center shadow-md shadow-rose-500/20">
+                <AlertCircle className="w-3.5 h-3.5 text-white" />
+              </div>
+              <h3 className="text-sm font-semibold text-foreground/85">Action Center</h3>
+            </div>
+            <span className="bg-red-500/20 text-red-500 py-0.5 px-2 rounded-full text-[10px] font-bold">
+              {MOCK_SUPERADMIN_ALERTS.length}
+            </span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto max-h-[300px]">
+            <div className="p-3 flex flex-col gap-2">
+              {MOCK_SUPERADMIN_ALERTS.map((alert) => (
+                <div key={alert.id} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/10 flex gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    {ALERT_ICONS[alert.type]}
                   </div>
-                  <div className="h-2 bg-white/30 rounded-full overflow-hidden backdrop-blur-sm">
-                    <div
-                      className="h-full rounded-full transition-all duration-700 ease-out"
-                      style={{ width: `${p.pct}%`, background: `linear-gradient(90deg, ${p.color}aa, ${p.color})` }}
-                    />
+                  <div>
+                    <h4 className="text-xs font-semibold text-foreground/90">{alert.title}</h4>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1 leading-relaxed">
+                      {alert.desc}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
-
-            <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground/60">Total</span>
-              <span className="text-sm font-bold text-foreground/80">{bookings.length} bookings</span>
-            </div>
           </div>
         </div>
+
       </div>
-    </>
+
+    </div>
   );
 };

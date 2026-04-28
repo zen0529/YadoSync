@@ -1,7 +1,7 @@
 # YadoManagement — Claude Code Instructions
 
 ## Project Overview
-YadoManagement is an accommodation channel management platform for the Philippines market. It is NOT a consumer-facing booking site. It competes against existing channel managers (Beds24, Channex, Smoobu) but with a commission-based model instead of subscriptions.
+YadoManagement is an accommodation channel management platform for the Philippines market. It is NOT a consumer-facing booking site. It competes against existing channel managers (Lodigy, Smoobu) but with a commission-based model instead of subscriptions.
 
 There are two types of users:
 - **Property owners** — sign up, connect their OTA accounts via Beds24, and manage their own properties. They see only their own data.

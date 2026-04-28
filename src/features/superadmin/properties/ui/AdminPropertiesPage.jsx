@@ -11,7 +11,10 @@ import {
   CalendarCheck,
   Percent,
   Loader2,
+  FileText
 } from "lucide-react";
+import { PropertyLedgerModal } from "../components/PropertyLedgerModal";
+import { MOCK_ADMIN_PROPERTIES } from "@/data/constants";
 
 export const AdminPropertiesPage = () => {
   const [properties, setProperties] = useState([]);
@@ -19,23 +22,18 @@ export const AdminPropertiesPage = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [ownerFilter, setOwnerFilter] = useState("all");
+  const [selectedProperty, setSelectedProperty] = useState(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [propsData, ownersData] = await Promise.all([
-          getAllProperties(),
-          getAllOwners(),
-        ]);
-        setProperties(propsData);
-        setOwners(ownersData);
-      } catch (err) {
-        console.error("Failed to load properties:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    // MOCK DATA INJECTION
+    setProperties(MOCK_ADMIN_PROPERTIES);
+    setOwners([
+      { id: "o1", full_name: "Emma Davis" },
+      { id: "o2", full_name: "Noah Wilson" },
+      { id: "o3", full_name: "Liam Smith" },
+      { id: "o4", full_name: "Olivia Jones" }
+    ]);
+    setLoading(false);
   }, []);
 
   if (loading) {
@@ -103,9 +101,9 @@ export const AdminPropertiesPage = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="divide-y divide-white/15 min-w-[800px]">
+            <div className="divide-y divide-white/15 min-w-[1100px]">
               {/* Header */}
-              <div className="grid grid-cols-[1.2fr_0.8fr_1fr_0.8fr_auto_0.5fr_0.5fr_auto] gap-3 px-5 py-2.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1.5fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-2.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
                 <div className="flex items-center gap-1.5"><Building2 className="w-3 h-3" /> Property</div>
                 <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Location</div>
                 <div className="flex items-center gap-1.5"><User className="w-3 h-3" /> Owner</div>
@@ -114,13 +112,14 @@ export const AdminPropertiesPage = () => {
                 <div className="flex items-center gap-1.5"><CalendarCheck className="w-3 h-3" /> Bookings</div>
                 <div className="flex items-center gap-1.5"><Percent className="w-3 h-3" /> Rate</div>
                 <div>Status</div>
+                <div className="text-right">Actions</div>
               </div>
 
               {/* Rows */}
               {filtered.map((p) => (
                 <div
                   key={p.id}
-                  className="grid grid-cols-[1.2fr_0.8fr_1fr_0.8fr_auto_0.5fr_0.5fr_auto] gap-3 px-5 py-3.5 items-center hover:bg-white/20 transition-colors duration-200 cursor-default"
+                  className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1.5fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-3.5 items-center hover:bg-white/20 transition-colors duration-200 cursor-default"
                 >
                   <span className="text-sm font-medium text-foreground/85">{p.name}</span>
                   <span className="text-sm text-muted-foreground/70">{p.location}</span>
@@ -135,12 +134,27 @@ export const AdminPropertiesPage = () => {
                   <span className="text-sm text-center font-medium text-foreground/80">{p.bookingCount}</span>
                   <span className="text-sm text-center font-medium text-foreground/80">{p.commissionRate}%</span>
                   <StatusBadge status={p.status} />
+                  <div className="flex justify-end">
+                    <button 
+                      onClick={() => setSelectedProperty(p)}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-indigo-500/20 shadow-sm"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      View Ledger
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* MODAL */}
+      <PropertyLedgerModal 
+        property={selectedProperty} 
+        onClose={() => setSelectedProperty(null)} 
+      />
     </>
   );
 };

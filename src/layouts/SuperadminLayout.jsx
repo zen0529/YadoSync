@@ -21,13 +21,14 @@ import {
   PanelLeftOpen,
   Moon,
   Sun,
+  Activity,
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { id: "overview",    label: "Overview",    icon: LayoutGrid },
-  { id: "properties",  label: "Properties",  icon: Building2 },
-  { id: "bookings",    label: "Bookings",    icon: CalendarCheck },
-  { id: "earnings",    label: "Earnings",    icon: Coins },
+  { id: "overview",    label: "Overview",          icon: LayoutGrid },
+  { id: "properties",  label: "Properties",        icon: Building2 },
+  { id: "billing",     label: "Billing & Revenue", icon: Coins },
+  { id: "logs",        label: "System Logs",       icon: Activity },
 ];
 
 const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) => {
@@ -43,10 +44,8 @@ const SidebarContent = ({ collapsed, page, closeSidebar, username, signOut }) =>
           <div className="flex items-center gap-2.5">
             <img src={yadoLogo} alt="" className="w-8 h-10 shrink-0" aria-hidden="true" />
             <div>
-              <p className="text-lg font-extrabold text-white tracking-wide">YadoManagement</p>
-              <span className="inline-block text-[9px] font-bold bg-green-500/80 text-white px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5">
-                Superadmin
-              </span>
+              <p className="pt-3 text-[15px] font-extrabold text-white tracking-wide leading-none">YadoManagement</p>
+              <p className="text-[10px] text-green-400 font-bold uppercase tracking-wider mt-1">Superadmin</p>
             </div>
           </div>
         )}
