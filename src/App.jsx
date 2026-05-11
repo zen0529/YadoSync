@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/features/auth/context/AuthContext";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -15,7 +16,7 @@ import { InboxPage } from "@/features/property-owner/inbox/ui/InboxPage";
 import ConnectionsPage from "@/features/property-owner/connections/ui/ConnectionsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { AdminOverviewPage } from "@/features/superadmin/overview/ui/AdminOverviewPage";
-import { AdminPropertiesPage } from "@/features/superadmin/properties/ui/AdminPropertiesPage";
+import { AdminPropertiesPage } from "@/features/superadmin/properties";
 import { BillingPage } from "@/features/superadmin/billing/ui/BillingPage";
 import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage";
 import LandingPage from "@/features/landingPage/LandingPage";
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster position="top-right" richColors closeButton />
         <Routes>
           {/* Public routes */}
           <Route

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getAllProperties, getAllOwners } from "../queries";
@@ -11,9 +12,11 @@ import {
   CalendarCheck,
   Percent,
   Loader2,
-  FileText
+  FileText,
+  Plus
 } from "lucide-react";
 import { PropertyLedgerModal } from "../components/PropertyLedgerModal";
+import { AddPropertyPanel } from "../components/AddPropertyPanel";
 import { MOCK_ADMIN_PROPERTIES } from "@/data/constants";
 
 export const AdminPropertiesPage = () => {
@@ -23,6 +26,7 @@ export const AdminPropertiesPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     // MOCK DATA INJECTION
@@ -52,33 +56,45 @@ export const AdminPropertiesPage = () => {
 
   return (
     <>
-      {/* FILTERS */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 text-xs w-36 glass-filter-btn rounded-xl border-0">
-            <SelectValue placeholder="Status: All" />
-          </SelectTrigger>
-          <SelectContent className="glass-dropdown rounded-xl border-white/30">
-            <SelectItem value="all" className="text-xs rounded-lg">Status: All</SelectItem>
-            <SelectItem value="active" className="text-xs rounded-lg">Active</SelectItem>
-            <SelectItem value="setup" className="text-xs rounded-lg">Setup</SelectItem>
-            <SelectItem value="suspended" className="text-xs rounded-lg">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* FILTERS & ACTIONS */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9 text-xs w-36 glass-filter-btn rounded-xl border-0">
+              <SelectValue placeholder="Status: All" />
+            </SelectTrigger>
+            <SelectContent className="glass-dropdown rounded-xl border-white/30">
+              <SelectItem value="all" className="text-xs rounded-lg">Status: All</SelectItem>
+              <SelectItem value="active" className="text-xs rounded-lg">Active</SelectItem>
+              <SelectItem value="setup" className="text-xs rounded-lg">Setup</SelectItem>
+              <SelectItem value="suspended" className="text-xs rounded-lg">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-          <SelectTrigger className="h-9 text-xs w-44 glass-filter-btn rounded-xl border-0">
-            <SelectValue placeholder="Owner: All" />
-          </SelectTrigger>
-          <SelectContent className="glass-dropdown rounded-xl border-white/30">
-            <SelectItem value="all" className="text-xs rounded-lg">Owner: All</SelectItem>
-            {owners.map((o) => (
-              <SelectItem key={o.id} value={o.id} className="text-xs rounded-lg">
-                {o.full_name || o.email}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+            <SelectTrigger className="h-9 text-xs w-44 glass-filter-btn rounded-xl border-0">
+              <SelectValue placeholder="Owner: All" />
+            </SelectTrigger>
+            <SelectContent className="glass-dropdown rounded-xl border-white/30">
+              <SelectItem value="all" className="text-xs rounded-lg">Owner: All</SelectItem>
+              {owners.map((o) => (
+                <SelectItem key={o.id} value={o.id} className="text-xs rounded-lg">
+                  {o.full_name || o.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Button
+            onClick={() => setPanelOpen(true)}
+            className="h-9 rounded-xl glass-filter-btn border-0 text-xs font-semibold px-4 gap-2 shadow-lg shadow-black/5 hover:bg-white/30 transition-all duration-200 text-foreground"
+          >
+            <Plus className="w-4 h-4" />
+            Add Property
+          </Button>
+        </div>
       </div>
 
       {/* PROPERTIES TABLE */}
@@ -154,6 +170,12 @@ export const AdminPropertiesPage = () => {
       <PropertyLedgerModal 
         property={selectedProperty} 
         onClose={() => setSelectedProperty(null)} 
+      />
+
+      {/* ADD PROPERTY PANEL */}
+      <AddPropertyPanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
       />
     </>
   );
