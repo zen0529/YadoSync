@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const AuthContext = createContext(null);
@@ -16,7 +16,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(false);
 
+  // Tracks whether the role has already been fetched for the current session.
+  // Supabase fires onAuthStateChange multiple times (SIGNED_IN, TOKEN_REFRESHED,
+  // visibility changes) — this ref prevents redundant DB calls and the resulting
+  // roleLoading=true flash that would unmount and remount the entire layout.
+  const roleFetchedRef = useRef(false);
+
   const fetchUserRole = async (userId) => {
+    // Skip if already fetched for this session
+    if (roleFetchedRef.current) return;
+    roleFetchedRef.current = true;
+
     setRoleLoading(true);
     try {
       const { data: profile, error } = await supabase
@@ -51,6 +61,8 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
           setRole(null);
           setFullName(null);
+          // Reset so the next sign-in fetches the role fresh
+          roleFetchedRef.current = false;
         }
         setLoading(false);
       }
