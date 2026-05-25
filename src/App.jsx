@@ -15,7 +15,7 @@ import { InventoryPage } from "@/features/property-owner/inventory/ui/InventoryP
 import { InboxPage } from "@/features/property-owner/inbox/ui/InboxPage";
 import ConnectionsPage from "@/features/property-owner/connections/ui/ConnectionsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
-import { AdminOverviewPage } from "@/features/superadmin/overview/ui/AdminOverviewPage";
+import { AdminOverviewPage } from "@/features/superadmin/overview/page/AdminOverviewPage";
 import { AdminPropertiesPage } from "@/features/superadmin/properties";
 import { BillingPage } from "@/features/superadmin/billing/ui/BillingPage";
 import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage";
