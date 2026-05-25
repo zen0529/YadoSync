@@ -151,7 +151,7 @@ export const AdminPropertiesPage = () => {
                   <span className="text-sm text-center font-medium text-foreground/80">{p.commissionRate}%</span>
                   <StatusBadge status={p.status} />
                   <div className="flex justify-end">
-                    <button 
+                    <button
                       onClick={() => setSelectedProperty(p)}
                       className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-indigo-500/20 shadow-sm"
                     >
@@ -167,9 +167,9 @@ export const AdminPropertiesPage = () => {
       </div>
 
       {/* MODAL */}
-      <PropertyLedgerModal 
-        property={selectedProperty} 
-        onClose={() => setSelectedProperty(null)} 
+      <PropertyLedgerModal
+        property={selectedProperty}
+        onClose={() => setSelectedProperty(null)}
       />
 
       {/* ADD PROPERTY PANEL */}
