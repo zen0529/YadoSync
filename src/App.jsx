@@ -18,7 +18,7 @@ import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { AdminOverviewPage } from "@/features/superadmin/overview/page/AdminOverviewPage";
 import { AdminPropertiesPage } from "@/features/superadmin/properties";
 import { BillingPage } from "@/features/superadmin/billing/ui/BillingPage";
-import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage";
+import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage.jsx";
 import LandingPage from "@/features/landingPage/LandingPage";
 
 const AuthRedirect = ({ children }) => {
