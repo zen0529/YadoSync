@@ -117,6 +117,17 @@ export const BasicInfoTab = ({ form, set, handleCountryChange, handlePhoneChange
         />
       </Field>
 
+      <Field label="Owner Password">
+        <input
+          className={inputCls}
+          type="text"
+          placeholder="Temp login password"
+          value={form.password}
+          onChange={e => set("password", e.target.value)}
+          required
+        />
+      </Field>
+
       <Field label="Phone Number">
         <input
           className={inputCls}

@@ -3,8 +3,12 @@ import { AsYouType } from "libphonenumber-js";
 import { toast } from "sonner";
 import { validatePropertyForm } from "../utils/validatePropertyForm";
 import { uploadPropertyPhotos } from "../utils/uploadPropertyPhotos";
-import { createProperty } from "../queries/createProperty";
+import { createProperty } from "../channex/createProperty";
+import { deleteProperty } from "../channex/deleteProperty";
 import { defaultForm, COUNTRIES, TZ_MAP } from "../constants/propertyConstants";
+import { useCreateProperty } from "./useCreateProperty";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 /**
  * usePropertyForm — encapsulates all form state and business logic
@@ -19,6 +23,8 @@ export const usePropertyForm = (open, onClose) => {
   const [newPhoto, setNewPhoto] = useState({ file: null, preview: "", description: "", author: "" });
   const [logoData, setLogoData] = useState({ file: null, preview: "" });
   const [submitting, setSubmitting] = useState(false);
+  const { create: saveToSupabase } = useCreateProperty();
+  const { user } = useAuth();
 
   // Reset to defaults each time the panel is opened
   useEffect(() => {
@@ -126,9 +132,51 @@ export const usePropertyForm = (open, onClose) => {
       };
       console.log("[DEBUG] Channex payload:", JSON.stringify(resolvedForm, null, 2));
 
+      // 2.5 Create Auth User via Edge Function
+      if (!form.email || !form.password) {
+        throw new Error("Owner Email and Password are required to create the property account.");
+      }
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('create-property-user', {
+        body: {
+          email: form.email,
+          password: form.password,
+          fullName: form.title
+        }
+      });
+
+      if (edgeError) {
+        let realMessage = edgeError.message;
+        try {
+          if (edgeError.context && typeof edgeError.context.json === 'function') {
+            const errBody = await edgeError.context.json();
+            if (errBody.error) realMessage = errBody.error;
+          }
+        } catch (_) {}
+        throw new Error(`Failed to create owner account: ${realMessage}`);
+      }
+      if (edgeData?.error) {
+        throw new Error(`Failed to create owner account: ${edgeData.error}`);
+      }
+      
+      const newUserId = edgeData.user.id;
+      console.log("[DEBUG] Created new user with ID:", newUserId);
+
       // 3. Send to Channex
       const channexResult = await createProperty(resolvedForm);
       console.log("[DEBUG] Channex response:", channexResult);
+
+      // 4. Save to Supabase
+      try {
+        await saveToSupabase(channexResult, newUserId);
+        console.log("[DEBUG] Saved to Supabase");
+      } catch (supabaseError) {
+        // Rollback Channex creation if Supabase save fails
+        console.error("[DEBUG] Supabase save failed, rolling back Channex property:", channexResult.data.id);
+        const deletingProperty = await deleteProperty(channexResult.data.id);
+        console.log("[DEBUG] Deleted Channex property:", deletingProperty);
+        throw new Error("Failed to save property to database. The operation has been rolled back.");
+      }
+
       toast.success("Property created!", {
         description: `"${form.title}" has been successfully added.`,
       });

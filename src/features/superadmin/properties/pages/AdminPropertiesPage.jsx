@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { StatusBadge } from "@/components/StatusBadge";
-import { getAllProperties, getAllOwners } from "../queries";
+import { getAllProperties, getAllOwners } from "../channex";
 import {
   Building2,
   MapPin,

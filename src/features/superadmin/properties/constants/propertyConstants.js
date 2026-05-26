@@ -44,6 +44,7 @@ export const defaultForm = {
   title:         "",
   currency:      "GBP",
   email:         "",
+  password:      "",
   phone:         "",
   zip_code:      "",
   country:       "GB",
