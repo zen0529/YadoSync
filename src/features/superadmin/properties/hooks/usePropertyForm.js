@@ -140,7 +140,7 @@ export const usePropertyForm = (open, onClose) => {
         body: {
           email: form.email,
           password: form.password,
-          fullName: form.title
+          fullName: form.owner_name || form.title
         }
       });
 
@@ -163,6 +163,10 @@ export const usePropertyForm = (open, onClose) => {
 
       // 3. Send to Channex
       const channexResult = await createProperty(resolvedForm);
+      if (channexResult?.data?.attributes) {
+        channexResult.data.attributes.commission_rate = resolvedForm.commission_rate;
+        channexResult.data.attributes.owner_name = resolvedForm.owner_name;
+      }
       console.log("[DEBUG] Channex response:", channexResult);
 
       // 4. Save to Supabase

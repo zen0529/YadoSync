@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PlatformBadge } from "@/components/PlatformBadge";
@@ -13,46 +13,82 @@ import {
   Percent,
   Loader2,
   FileText,
-  Plus
+  Plus,
+  Phone,
+  Search
 } from "lucide-react";
 import { PropertyLedgerModal } from "../components/PropertyLedgerModal";
 import { AddPropertyPanel } from "../components/AddPropertyPanel";
-import { MOCK_ADMIN_PROPERTIES } from "@/data/constants";
+import { useProperties } from "../hooks/useProperties";
+import { debounce } from "@/utils/debounce";
+import { Input } from "@/components/ui/input";
 
 export const AdminPropertiesPage = () => {
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const { properties: dbProperties, loading: dbLoading } = useProperties(debouncedSearch, statusFilter);
+
   const [properties, setProperties] = useState([]);
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [ownerFilter, setOwnerFilter] = useState("all");
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  useEffect(() => {
-    // MOCK DATA INJECTION
-    setProperties(MOCK_ADMIN_PROPERTIES);
-    setOwners([
-      { id: "o1", full_name: "Emma Davis" },
-      { id: "o2", full_name: "Noah Wilson" },
-      { id: "o3", full_name: "Liam Smith" },
-      { id: "o4", full_name: "Olivia Jones" }
-    ]);
-    setLoading(false);
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-green-500" />
-        <span className="ml-2 text-sm text-muted-foreground">Loading properties...</span>
-      </div>
-    );
-  }
-
-  const filtered = properties.filter((p) =>
-    (statusFilter === "all" || p.status === statusFilter) &&
-    (ownerFilter === "all" || p.userId === ownerFilter)
+  const debouncedSetSearch = useCallback(
+    debounce((val) => setDebouncedSearch(val), 400),
+    []
   );
+
+  const handleSearchChange = (e) => {
+    setSearchInput(e.target.value);
+    debouncedSetSearch(e.target.value);
+  };
+
+  useEffect(() => {
+    if (dbProperties) {
+      setProperties(dbProperties.map(p => {
+        const address = p.property_address?.[0] || {};
+        return {
+          id: p.id,
+          name: p.name,
+          location: [address.city, address.country].filter(Boolean).join(", ") || "No location",
+          ownerName: p.owner_name || "Unknown",
+          ownerEmail: p.owner_email || "N/A",
+          ownerPhone: p.owner_phone || "N/A",
+          platforms: [], // Mock
+          bookingCount: 0, // Mock
+          commissionRate: p.commission_rate || 0,
+          status: p.status,
+          userId: p.user_id,
+        };
+      }));
+
+      // Keep owners mock or extract from dbProperties
+      const uniqueOwners = Array.from(new Set(dbProperties.map(p => p.user_id).filter(Boolean))).map(id => {
+        const prop = dbProperties.find(p => p.user_id === id);
+        return { id, full_name: prop.owner_name || prop.owner_email };
+      });
+      setOwners(uniqueOwners.length ? uniqueOwners : [
+        { id: "o1", full_name: "Emma Davis" },
+        { id: "o2", full_name: "Noah Wilson" },
+        { id: "o3", full_name: "Liam Smith" },
+        { id: "o4", full_name: "Olivia Jones" }
+      ]);
+      setLoading(false);
+    }
+  }, [dbProperties]);
+
+  // if (loading || dbLoading) {
+  //   return (
+  //     <div className="flex items-center justify-center py-20">
+  //       <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+  //       <span className="ml-2 text-sm text-muted-foreground">Loading properties...</span>
+  //     </div>
+  //   );
+  // }
+
+
 
   return (
     <>
@@ -66,24 +102,20 @@ export const AdminPropertiesPage = () => {
             <SelectContent className="glass-dropdown rounded-xl border-white/30">
               <SelectItem value="all" className="text-xs rounded-lg">Status: All</SelectItem>
               <SelectItem value="active" className="text-xs rounded-lg">Active</SelectItem>
-              <SelectItem value="setup" className="text-xs rounded-lg">Setup</SelectItem>
-              <SelectItem value="suspended" className="text-xs rounded-lg">Suspended</SelectItem>
+              <SelectItem value="setup" className="text-xs rounded-lg">Inactive</SelectItem>
+              {/* <SelectItem value="suspended" className="text-xs rounded-lg">Suspended</SelectItem> */}
             </SelectContent>
           </Select>
 
-          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-            <SelectTrigger className="h-9 text-xs w-44 glass-filter-btn rounded-xl border-0">
-              <SelectValue placeholder="Owner: All" />
-            </SelectTrigger>
-            <SelectContent className="glass-dropdown rounded-xl border-white/30">
-              <SelectItem value="all" className="text-xs rounded-lg">Owner: All</SelectItem>
-              {owners.map((o) => (
-                <SelectItem key={o.id} value={o.id} className="text-xs rounded-lg">
-                  {o.full_name || o.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+            <Input
+              value={searchInput}
+              onChange={handleSearchChange}
+              placeholder="Search properties, owners..."
+              className="h-9 w-64 pl-9 text-xs glass-filter-btn rounded-xl border-0 placeholder:text-muted-foreground/50"
+            />
+          </div>
         </div>
 
         <div>
@@ -104,10 +136,15 @@ export const AdminPropertiesPage = () => {
             <Building2 className="w-3.5 h-3.5 text-white" />
           </div>
           <h3 className="text-sm font-semibold text-foreground/85">All Properties</h3>
-          <span className="text-xs text-muted-foreground/60 ml-1">({filtered.length})</span>
+          <span className="text-xs text-muted-foreground/60 ml-1">({properties.length})</span>
         </div>
 
-        {filtered.length === 0 ? (
+        {(loading || dbLoading) ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-green-500 mb-2" />
+            <span className="text-sm text-muted-foreground">Loading properties...</span>
+          </div>
+        ) : properties.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6">
             <div className="w-12 h-12 rounded-full bg-blue-100/60 flex items-center justify-center mb-3">
               <Building2 className="w-6 h-6 text-blue-500/60" />
@@ -119,11 +156,12 @@ export const AdminPropertiesPage = () => {
           <div className="overflow-x-auto">
             <div className="divide-y divide-white/15 min-w-[1100px]">
               {/* Header */}
-              <div className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1.5fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-2.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_1fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-2.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
                 <div className="flex items-center gap-1.5"><Building2 className="w-3 h-3" /> Property</div>
                 <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Location</div>
                 <div className="flex items-center gap-1.5"><User className="w-3 h-3" /> Owner</div>
                 <div className="flex items-center gap-1.5">Email</div>
+                <div className="flex items-center gap-1.5"><Phone className="w-3 h-3" /> Phone #</div>
                 <div className="flex items-center gap-1.5"><Globe className="w-3 h-3" /> Platforms</div>
                 <div className="flex items-center gap-1.5"><CalendarCheck className="w-3 h-3" /> Bookings</div>
                 <div className="flex items-center gap-1.5"><Percent className="w-3 h-3" /> Rate</div>
@@ -132,15 +170,16 @@ export const AdminPropertiesPage = () => {
               </div>
 
               {/* Rows */}
-              {filtered.map((p) => (
+              {properties.map((p) => (
                 <div
                   key={p.id}
-                  className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1.5fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-3.5 items-center hover:bg-white/20 transition-colors duration-200 cursor-default"
+                  className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_1fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-3.5 items-center hover:bg-white/20 transition-colors duration-200 cursor-default"
                 >
                   <span className="text-sm font-medium text-foreground/85">{p.name}</span>
                   <span className="text-sm text-muted-foreground/70">{p.location}</span>
                   <span className="text-sm text-muted-foreground/70">{p.ownerName}</span>
                   <span className="text-xs text-muted-foreground/60 truncate">{p.ownerEmail}</span>
+                  <span className="text-xs text-muted-foreground/60 truncate">{p.ownerPhone}</span>
                   <div className="flex gap-1 flex-wrap">
                     {p.platforms.map((pl) => (
                       <PlatformBadge key={pl} platform={pl} />

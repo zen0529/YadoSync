@@ -21,6 +21,20 @@ import { BillingPage } from "@/features/superadmin/billing/ui/BillingPage";
 import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage.jsx";
 import LandingPage from "@/features/landingPage/LandingPage";
 
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Fix for default Leaflet marker icon in React
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
 const AuthRedirect = ({ children }) => {
   const { user, role, loading, roleLoading } = useAuth();
   if (loading || (user && roleLoading)) {

@@ -42,9 +42,12 @@ export const MIN_STAY_TYPES = ["both", "arrival_only", "nightly"];
 /* ─── Default form state ─── */
 export const defaultForm = {
   title:         "",
+  status:        "active",
   currency:      "GBP",
+  commission_rate: 15,
   email:         "",
   password:      "",
+  owner_name:    "",
   phone:         "",
   zip_code:      "",
   country:       "GB",

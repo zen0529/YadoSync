@@ -14,6 +14,7 @@ export const createProperty = async (form) => {
   const payload = {
     property: {
       title:         form.title,
+      is_active:     form.status === "active",
       currency:      form.currency,
       email:         form.email         || undefined,
       phone:         form.phone         || undefined,

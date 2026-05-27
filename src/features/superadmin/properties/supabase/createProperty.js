@@ -14,8 +14,10 @@ export const createProperty = async (channexResult, userId) => {
       status: attrs.is_active ? "active" : "inactive",
       owner_email: attrs.email,
       owner_phone: attrs.phone,
+      owner_name: attrs.owner_name || "",
       currency: attrs.currency,
       property_type: attrs.property_type,
+      commission_rate: attrs.commission_rate || 15,
       channex_settings: attrs.settings || {}
     }])
     .select("id")
