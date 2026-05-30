@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
  *  - onClose    {function} called when Cancel is clicked
  */
 export const PanelFooter = ({ tabs, activeTab, submitting, onClose, isEditing }) => (
-  <div className="shrink-0 px-6 py-4 border-t border-border bg-muted/30 flex items-center justify-between gap-3">
+  <div className="shrink-0 px-6 py-4 border-t border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-between gap-3">
     <p className="text-[11px] text-muted-foreground/50 flex items-center gap-1">
       <ChevronRight className="w-3 h-3" />
       {tabs.findIndex(t => t.id === activeTab) + 1} of {tabs.length} sections
@@ -21,7 +21,7 @@ export const PanelFooter = ({ tabs, activeTab, submitting, onClose, isEditing })
         type="button"
         onClick={onClose}
         disabled={submitting}
-        className="h-9 px-4 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all border border-border disabled:opacity-50 disabled:cursor-not-allowed"
+        className="h-9 px-4 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-all border border-black/5 dark:border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Cancel
       </button>
