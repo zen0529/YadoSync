@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
  *  - submitting {boolean}  disables actions while the form is submitting
  *  - onClose    {function} called when Cancel is clicked
  */
-export const PanelFooter = ({ tabs, activeTab, submitting, onClose }) => (
+export const PanelFooter = ({ tabs, activeTab, submitting, onClose, isEditing }) => (
   <div className="shrink-0 px-6 py-4 border-t border-border bg-muted/30 flex items-center justify-between gap-3">
     <p className="text-[11px] text-muted-foreground/50 flex items-center gap-1">
       <ChevronRight className="w-3 h-3" />
@@ -37,7 +37,7 @@ export const PanelFooter = ({ tabs, activeTab, submitting, onClose }) => (
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
           </svg>
         )}
-        {submitting ? "Creating..." : "Create Property"}
+        {submitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Property" : "Create Property")}
       </Button>
     </div>
   </div>

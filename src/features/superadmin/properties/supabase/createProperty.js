@@ -18,7 +18,9 @@ export const createProperty = async (channexResult, userId) => {
       currency: attrs.currency,
       property_type: attrs.property_type,
       commission_rate: attrs.commission_rate || 15,
-      channex_settings: attrs.settings || {}
+      channex_settings: attrs.settings || {},
+      content_description: attrs.content?.description || null,
+      content_imp_info: attrs.content?.important_information || null,
     }])
     .select("id")
     .single();

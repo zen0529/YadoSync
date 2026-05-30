@@ -69,7 +69,7 @@ export const ContentTab = ({ form, setContent, newPhoto, setNewPhoto, addPhoto, 
               >
                 <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border">
                   <img
-                    src={ph.preview}
+                    src={ph.preview || ph.url}
                     alt={ph.description}
                     className="w-full h-full object-cover"
                     onError={e => { e.target.style.display = "none"; }}
@@ -80,7 +80,7 @@ export const ContentTab = ({ form, setContent, newPhoto, setNewPhoto, addPhoto, 
                     {ph.description || "Untitled"}
                   </p>
                   <p className="text-[10px] text-muted-foreground/60 truncate">
-                    {ph.file?.name || ""}
+                    {ph.file?.name || (ph.url ? ph.url.split("/").pop() : "Existing photo")}
                   </p>
                 </div>
                 <button

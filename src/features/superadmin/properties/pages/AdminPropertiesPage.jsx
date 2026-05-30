@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getAllProperties, getAllOwners } from "../channex";
+import { getProperty } from "../supabase/getProperty";
+import { toast } from "sonner";
 import {
   Building2,
   MapPin,
@@ -15,7 +17,8 @@ import {
   FileText,
   Plus,
   Phone,
-  Search
+  Search,
+  Edit
 } from "lucide-react";
 import { PropertyLedgerModal } from "../components/PropertyLedgerModal";
 import { AddPropertyPanel } from "../components/AddPropertyPanel";
@@ -34,6 +37,8 @@ export const AdminPropertiesPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [editProperty, setEditProperty] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const debouncedSetSearch = useCallback(
     debounce((val) => setDebouncedSearch(val), 400),
@@ -48,11 +53,10 @@ export const AdminPropertiesPage = () => {
   useEffect(() => {
     if (dbProperties) {
       setProperties(dbProperties.map(p => {
-        const address = p.property_address?.[0] || {};
         return {
           id: p.id,
           name: p.name,
-          location: [address.city, address.country].filter(Boolean).join(", ") || "No location",
+          location: p.property_address?.address_line || "No location",
           ownerName: p.owner_name || "Unknown",
           ownerEmail: p.owner_email || "N/A",
           ownerPhone: p.owner_phone || "N/A",
@@ -78,6 +82,8 @@ export const AdminPropertiesPage = () => {
       setLoading(false);
     }
   }, [dbProperties]);
+
+  console.log("prpoerties", properties)
 
   // if (loading || dbLoading) {
   //   return (
@@ -120,7 +126,10 @@ export const AdminPropertiesPage = () => {
 
         <div>
           <Button
-            onClick={() => setPanelOpen(true)}
+            onClick={() => {
+              setEditProperty(null);
+              setPanelOpen(true);
+            }}
             className="h-9 rounded-xl glass-filter-btn border-0 text-xs font-semibold px-4 gap-2 shadow-lg shadow-black/5 hover:bg-white/30 transition-all duration-200 text-foreground"
           >
             <Plus className="w-4 h-4" />
@@ -154,9 +163,9 @@ export const AdminPropertiesPage = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="divide-y divide-white/15 min-w-[1100px]">
+            <div className="divide-y divide-white/15 min-w-[1200px]">
               {/* Header */}
-              <div className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_1fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-2.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_1fr_0.8fr_0.8fr_100px_100px_80px] gap-4 px-5 py-2.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
                 <div className="flex items-center gap-1.5"><Building2 className="w-3 h-3" /> Property</div>
                 <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Location</div>
                 <div className="flex items-center gap-1.5"><User className="w-3 h-3" /> Owner</div>
@@ -166,6 +175,7 @@ export const AdminPropertiesPage = () => {
                 <div className="flex items-center gap-1.5"><CalendarCheck className="w-3 h-3" /> Bookings</div>
                 <div className="flex items-center gap-1.5"><Percent className="w-3 h-3" /> Rate</div>
                 <div>Status</div>
+                <div>Ledger</div>
                 <div className="text-right">Actions</div>
               </div>
 
@@ -173,7 +183,7 @@ export const AdminPropertiesPage = () => {
               {properties.map((p) => (
                 <div
                   key={p.id}
-                  className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_1fr_0.8fr_0.8fr_100px_120px] gap-4 px-5 py-3.5 items-center hover:bg-white/20 transition-colors duration-200 cursor-default"
+                  className="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_1fr_0.8fr_0.8fr_100px_100px_80px] gap-4 px-5 py-3.5 items-center hover:bg-white/20 transition-colors duration-200 cursor-default"
                 >
                   <span className="text-sm font-medium text-foreground/85">{p.name}</span>
                   <span className="text-sm text-muted-foreground/70">{p.location}</span>
@@ -189,13 +199,35 @@ export const AdminPropertiesPage = () => {
                   <span className="text-sm text-center font-medium text-foreground/80">{p.bookingCount}</span>
                   <span className="text-sm text-center font-medium text-foreground/80">{p.commissionRate}%</span>
                   <StatusBadge status={p.status} />
-                  <div className="flex justify-end">
+                  <div>
                     <button
                       onClick={() => setSelectedProperty(p)}
                       className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-indigo-500/20 shadow-sm"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       View Ledger
+                    </button>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={async () => {
+                        setEditProperty(null);
+                        setEditLoading(true);
+                        setPanelOpen(true);
+                        try {
+                          const fullProperty = await getProperty(p.id);
+                          setEditProperty(fullProperty);
+                        } catch (err) {
+                          toast.error("Failed to load property details for editing.");
+                          setPanelOpen(false);
+                        } finally {
+                          setEditLoading(false);
+                        }
+                      }}
+                      className="p-1.5 cursor-pointer rounded-lg hover:bg-white/20 text-muted-foreground hover:text-foreground transition-colors"
+                      title="Edit Property"
+                    >
+                      <Edit className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -214,7 +246,13 @@ export const AdminPropertiesPage = () => {
       {/* ADD PROPERTY PANEL */}
       <AddPropertyPanel
         open={panelOpen}
-        onClose={() => setPanelOpen(false)}
+        onClose={() => {
+          setPanelOpen(false);
+          setEditProperty(null);
+          setEditLoading(false);
+        }}
+        propertyToEdit={editProperty}
+        editLoading={editLoading}
       />
     </>
   );

@@ -11,6 +11,7 @@ export const useProperties = (searchQuery = "", statusFilter = "all") => {
       try {
         setLoading(true);
         const data = await getProperties(searchQuery, statusFilter);
+        console.log("fetced data", data)
         setProperties(data);
         setError(null);
       } catch (err) {

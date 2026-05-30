@@ -21,6 +21,18 @@ export const uploadPropertyPhotos = async (photos) => {
 
   const uploaded = await Promise.all(
     photos.map(async (photo, index) => {
+      // If it's already an uploaded photo (no new file, just existing url), skip upload
+      if (!photo.file && photo.url) {
+        return {
+          id:          photo.id, // preserve Channex ID if available
+          url:         photo.url,
+          position:    index,
+          author:      photo.author || "",
+          kind:        photo.kind || "photo",
+          description: photo.description || "",
+        };
+      }
+
       const ext      = photo.file.name.split(".").pop();
       const fileName = `${FOLDER}/${Date.now()}-${index}.${ext}`;
 

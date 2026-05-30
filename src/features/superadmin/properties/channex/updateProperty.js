@@ -1,35 +1,36 @@
-const CHANNEX_URL = import.meta.env.VITE_CHANNEX_URL;
+const CHANNEX_URL     = import.meta.env.VITE_CHANNEX_URL;
 const CHANNEX_API_KEY = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
 
 /**
- * Creates a new property via the Channex API.
+ * Updates an existing property via the Channex API.
  *
- * POST https://staging.channex.io/api/v1/properties
+ * PUT https://staging.channex.io/api/v1/properties/{propertyId}
  *
+ * @param {string} propertyId - The ID of the Channex property
  * @param {object} form - The form state from AddPropertyPanel
- * @returns {object}    - The created property data from the API
+ * @returns {object}    - The updated property data from the API
  * @throws  {Error}     - Throws a descriptive error for 401 / 422 / other failures
  */
-export const createProperty = async (form) => {
+export const updateProperty = async (propertyId, form) => {
   const payload = {
     property: {
-      title: form.title,
-      is_active: form.status === "active",
-      currency: form.currency,
-      email: form.email || undefined,
-      phone: form.phone || undefined,
-      zip_code: form.zip_code || undefined,
-      country: form.country || undefined,
-      state: form.state || undefined,
-      city: form.city || undefined,
-      address: form.address || undefined,
-      longitude: form.longitude || undefined,
-      latitude: form.latitude || undefined,
-      timezone: form.timezone || undefined,
+      title:         form.title,
+      is_active:     form.status === "active",
+      currency:      form.currency,
+      email:         form.email         || undefined,
+      phone:         form.phone         || undefined,
+      zip_code:      form.zip_code      || undefined,
+      country:       form.country       || undefined,
+      state:         form.state         || undefined,
+      city:          form.city          || undefined,
+      address:       form.address       || undefined,
+      longitude:     form.longitude     || undefined,
+      latitude:      form.latitude      || undefined,
+      timezone:      form.timezone      || undefined,
       property_type: form.property_type || undefined,
-      logo_url: form.logo_url || undefined,
-      website: form.website || undefined,
-      facilities: [],
+      logo_url:      form.logo_url      || undefined,
+      website:       form.website       || undefined,
+      facilities:    [],
       settings: {
         allow_availability_autoupdate_on_confirmation:
           form.settings.allow_availability_autoupdate_on_confirmation,
@@ -37,26 +38,26 @@ export const createProperty = async (form) => {
           form.settings.allow_availability_autoupdate_on_modification,
         allow_availability_autoupdate_on_cancellation:
           form.settings.allow_availability_autoupdate_on_cancellation,
-        min_stay_type: form.settings.min_stay_type,
-        min_price: form.settings.min_price || null,
-        max_price: form.settings.max_price || null,
-        state_length: form.settings.state_length,
-        cut_off_time: form.settings.cut_off_time,
-        cut_off_days: form.settings.cut_off_days,
+        min_stay_type:   form.settings.min_stay_type,
+        min_price:       form.settings.min_price       || null,
+        max_price:       form.settings.max_price       || null,
+        state_length:    form.settings.state_length,
+        cut_off_time:    form.settings.cut_off_time,
+        cut_off_days:    form.settings.cut_off_days,
         max_day_advance: form.settings.max_day_advance || null,
       },
       content: {
-        description: form.content.description || undefined,
+        description:           form.content.description           || undefined,
         important_information: form.content.important_information || undefined,
-        photos: form.content.photos.length > 0
-          ? form.content.photos
-          : undefined,
+        photos: form.content.photos,
       },
     },
   };
 
-  const response = await fetch(CHANNEX_URL, {
-    method: "POST",
+  console.log("[CHANNEX] PUT payload for property", propertyId, JSON.stringify(payload, null, 2));
+
+  const response = await fetch(`${CHANNEX_URL}/${propertyId}`, {
+    method:  "PUT",
     headers: {
       "Content-Type": "application/json",
       "user-api-key": CHANNEX_API_KEY,
@@ -64,15 +65,12 @@ export const createProperty = async (form) => {
     body: JSON.stringify(payload),
   });
 
-
-  // ── 201 Created ─────────────────────────────────────────────────────────────
-  if (response.status === 201) {
-
-    const data = await response.json();
-
-    console.log("channex property creation success data", data)
-
-    return data
+  // ── 200 OK ─────────────────────────────────────────────────────────────
+  if (response.status === 200) {
+    const result = await response.json();
+    console.log("[CHANNEX] PUT response for property", propertyId, JSON.stringify(result, null, 2));
+    console.log("[CHANNEX] Response photos:", result?.data?.attributes?.content?.photos);
+    return result;
   }
 
   // ── Parse error body for all failure cases ───────────────────────────────────

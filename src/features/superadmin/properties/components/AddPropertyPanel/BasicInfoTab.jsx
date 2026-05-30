@@ -21,7 +21,7 @@ import {
  *  - logoData            {object}   { file, preview } draft logo state
  *  - setLogoData         {function} setter for the draft logo state
  */
-export const BasicInfoTab = ({ form, set, handleCountryChange, handlePhoneChange, logoData, setLogoData }) => {
+export const BasicInfoTab = ({ form, set, handleCountryChange, handlePhoneChange, logoData, setLogoData, isEditing }) => {
   const logoInputRef = useRef(null);
 
   const [searchQuery, setSearchQuery] = useState(form.address || "");
@@ -48,9 +48,9 @@ export const BasicInfoTab = ({ form, set, handleCountryChange, handlePhoneChange
       try {
         let countryParam = "";
         if (form.country) {
-           countryParam = `&countrycodes=${form.country.toLowerCase()}`;
+          countryParam = `&countrycodes=${form.country.toLowerCase()}`;
         }
-        
+
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&addressdetails=1&limit=5${countryParam}`,
           { headers: { "Accept-Language": "en" } }
@@ -70,7 +70,7 @@ export const BasicInfoTab = ({ form, set, handleCountryChange, handlePhoneChange
   const handleSelectSuggestion = (place) => {
     setSearchQuery(place.display_name);
     setShowSuggestions(false);
-    
+
     // Auto-fill form
     set("address", place.address?.road || place.name || "");
     set("city", place.address?.city || place.address?.town || place.address?.village || "");
@@ -237,22 +237,24 @@ export const BasicInfoTab = ({ form, set, handleCountryChange, handlePhoneChange
 
         <Field label="Contact Email">
           <input
-            className={inputCls}
             type="email"
             placeholder="hotel@example.io"
             value={form.email}
             onChange={e => set("email", e.target.value)}
+            disabled={isEditing}
+            className={`${inputCls} ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
           />
         </Field>
 
         <Field label="Owner Password">
           <input
-            className={inputCls}
             type="text"
             placeholder="Temp login password"
             value={form.password}
             onChange={e => set("password", e.target.value)}
-            required
+            required={!isEditing}
+            disabled={isEditing}
+            className={`${inputCls} ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
           />
         </Field>
 
@@ -409,9 +411,9 @@ export const BasicInfoTab = ({ form, set, handleCountryChange, handlePhoneChange
       <div className="pt-2 pb-4">
         {form.latitude && form.longitude ? (
           <div className="rounded-xl overflow-hidden border border-border h-64 relative z-0">
-            <MapContainer 
-              center={[form.latitude, form.longitude]} 
-              zoom={15} 
+            <MapContainer
+              center={[form.latitude, form.longitude]}
+              zoom={15}
               scrollWheelZoom={false}
               className="w-full h-full"
             >

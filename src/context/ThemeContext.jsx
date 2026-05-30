@@ -8,7 +8,7 @@ export const ThemeProvider = ({ children }) => {
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem("yadomanagement-theme");
     if (saved) return saved === "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return false;
   });
 
   useEffect(() => {
