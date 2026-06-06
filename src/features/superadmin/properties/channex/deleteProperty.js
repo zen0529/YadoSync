@@ -1,4 +1,4 @@
-const CHANNEX_URL = import.meta.env.VITE_CHANNEX_URL;
+const CHANNEX_BASE_URL = import.meta.env.VITE_CHANNEX_BASE_URL;
 const CHANNEX_API_KEY = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
 
 /**
@@ -10,7 +10,7 @@ const CHANNEX_API_KEY = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
  * @returns {boolean} - True if deleted successfully
  */
 export const deleteProperty = async (id) => {
-  const response = await fetch(`${CHANNEX_URL}/${id}`, {
+  const response = await fetch(`${CHANNEX_BASE_URL}/api/v1/properties/${id}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

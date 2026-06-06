@@ -1,5 +1,5 @@
-// VITE_CHANNEX_URL points to …/api/v1/properties — swap the last segment for "photos"
-const CHANNEX_PHOTOS_URL = import.meta.env.VITE_CHANNEX_URL.replace(/\/properties$/, "/photos");
+// VITE_CHANNEX_BASE_URL points to the base API URL
+const CHANNEX_BASE_URL = import.meta.env.VITE_CHANNEX_BASE_URL;
 const CHANNEX_API_KEY    = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
 
 /**
@@ -14,7 +14,7 @@ const CHANNEX_API_KEY    = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
 export const deletePhoto = async (photoId) => {
   console.log("[CHANNEX] Deleting photo:", photoId);
 
-  const response = await fetch(`${CHANNEX_PHOTOS_URL}/${photoId}`, {
+  const response = await fetch(`${CHANNEX_BASE_URL}/api/v1/photos/${photoId}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

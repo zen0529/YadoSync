@@ -1,4 +1,4 @@
-const CHANNEX_URL = import.meta.env.VITE_CHANNEX_URL;
+const CHANNEX_BASE_URL = import.meta.env.VITE_CHANNEX_BASE_URL;
 const CHANNEX_API_KEY = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
 
 /**
@@ -55,7 +55,7 @@ export const createProperty = async (form) => {
     },
   };
 
-  const response = await fetch(CHANNEX_URL, {
+  const response = await fetch(`${CHANNEX_BASE_URL}/api/v1/properties`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -1,5 +1,4 @@
-// VITE_CHANNEX_URL points to …/api/v1/properties — swap the last segment for "photos"
-const CHANNEX_PHOTOS_URL = import.meta.env.VITE_CHANNEX_URL.replace(/\/properties$/, "/photos");
+const CHANNEX_BASE_URL = import.meta.env.VITE_CHANNEX_BASE_URL;
 const CHANNEX_API_KEY    = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
 
 /**
@@ -35,7 +34,7 @@ export const createPhoto = async (photoData) => {
 
   console.log("[CHANNEX] Creating (reverting) photo:", JSON.stringify(payload, null, 2));
 
-  const response = await fetch(CHANNEX_PHOTOS_URL, {
+  const response = await fetch(`${CHANNEX_BASE_URL}/api/v1/photos`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

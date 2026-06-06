@@ -1,4 +1,4 @@
-const CHANNEX_URL     = import.meta.env.VITE_CHANNEX_URL;
+const CHANNEX_BASE_URL = import.meta.env.VITE_CHANNEX_BASE_URL;
 const CHANNEX_API_KEY = import.meta.env.VITE_CHANNEX_STAGING_API_KEY;
 
 /**
@@ -56,7 +56,7 @@ export const updateProperty = async (propertyId, form) => {
 
   console.log("[CHANNEX] PUT payload for property", propertyId, JSON.stringify(payload, null, 2));
 
-  const response = await fetch(`${CHANNEX_URL}/${propertyId}`, {
+  const response = await fetch(`${CHANNEX_BASE_URL}/api/v1/properties/${propertyId}`, {
     method:  "PUT",
     headers: {
       "Content-Type": "application/json",

@@ -55,6 +55,7 @@ export const AdminPropertiesPage = () => {
       setProperties(dbProperties.map(p => {
         return {
           id: p.id,
+          channexPropertyId: p.channex_property_id,
           name: p.name,
           location: p.property_address?.address_line || "No location",
           ownerName: p.owner_name || "Unknown",
