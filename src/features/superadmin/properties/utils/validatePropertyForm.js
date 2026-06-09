@@ -13,7 +13,7 @@ export const validatePropertyForm = (form, setTab) => {
   const errors = [];
 
   if (!form.title.trim()) errors.push("Property title is required.");
-  if (!form.currency)     errors.push("Currency is required.");
+  if (!form.currency) errors.push("Currency is required.");
 
   if (form.phone && form.phone.trim()) {
     if (!isValidPhoneNumber(form.phone, form.country)) {

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { AsYouType } from "libphonenumber-js";
 import { toast } from "sonner";
 import { validatePropertyForm } from "../utils/validatePropertyForm";
-import { uploadPropertyPhotos } from "../utils/uploadPropertyPhotos";
+import { uploadPhotos } from "@/utils/uploadPhotos";
 import { deletePropertyPhotos } from "../utils/deletePropertyPhotos";
 import { createProperty } from "../channex/createProperty";
 import { updateProperty as updatePropertyChannex } from "../channex/updateProperty";
@@ -170,7 +170,7 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
       // 0. Upload logo if there is a pending logo file
       let finalLogoUrl = form.logo_url;
       if (logoData.file) {
-        const uploadedLogo = await uploadPropertyPhotos([{
+        const uploadedLogo = await uploadPhotos([{
           file: logoData.file,
           description: "Logo",
           author: ""
@@ -181,7 +181,7 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
       }
 
       // 1. Upload all photo files to Supabase; get back Channex-ready objects
-      const uploadedPhotos = await uploadPropertyPhotos(allPhotos);
+      const uploadedPhotos = await uploadPhotos(allPhotos);
       console.log("[DEBUG] Uploaded photos (public URLs):", uploadedPhotos);
 
       // 2. Build a resolved form where photos have public URLs instead of File refs

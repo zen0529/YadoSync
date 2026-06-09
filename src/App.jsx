@@ -11,7 +11,7 @@ import { BookingsPage } from "@/features/property-owner/bookings/ui/BookingsPage
 import { ResortsPage } from "@/features/property-owner/resorts/ui/ResortsPage";
 import { AnalyticsPage } from "@/features/property-owner/analytics/ui/AnalyticsPage";
 import { RatesPage } from "@/features/property-owner/rates/ui/RatesPage";
-import { InventoryPage } from "@/features/property-owner/inventory/ui/InventoryPage";
+import { InventoryPage } from "@/features/property-owner/inventory/pages/InventoryPage";
 import { InboxPage } from "@/features/property-owner/inbox/ui/InboxPage";
 import ConnectionsPage from "@/features/property-owner/connections/ui/ConnectionsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
