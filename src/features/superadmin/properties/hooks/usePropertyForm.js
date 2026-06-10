@@ -25,7 +25,6 @@ import { supabase } from "@/lib/supabase";
 export const usePropertyForm = (open, onClose, propertyToEdit) => {
   const [tab, setTab] = useState("basic");
   const [form, setForm] = useState(defaultForm);
-  const [newPhoto, setNewPhoto] = useState({ file: null, preview: "", description: "", author: "" });
   const [logoData, setLogoData] = useState({ file: null, preview: "" });
   const [deletedPhotos, setDeletedPhotos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -75,7 +74,6 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
         setForm(defaultForm);
       }
       setTab("basic");
-      setNewPhoto({ file: null, preview: "", description: "", author: "" });
       setLogoData({ file: null, preview: "" });
       setDeletedPhotos([]);
     }
@@ -110,20 +108,23 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
   };
 
   /* ── Photo helpers ── */
-  const addPhoto = () => {
-    if (!newPhoto.file) return;
-    setContent("photos", [
-      ...form.content.photos,
-      {
-        file: newPhoto.file,
-        preview: newPhoto.preview,
-        description: newPhoto.description,
-        author: newPhoto.author,
-        position: form.content.photos.length,
-        kind: "photo",
-      },
-    ]);
-    setNewPhoto({ file: null, preview: "", description: "", author: "" });
+  const addPhotos = (files) => {
+    const newPhotos = files.map((file, idx) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      description: "",
+      author: "",
+      position: form.content.photos.length + idx,
+      kind: "photo",
+    }));
+    setContent("photos", [...form.content.photos, ...newPhotos]);
+  };
+
+  const updatePhotoField = (index, field, value) => {
+    setContent(
+      "photos",
+      form.content.photos.map((ph, i) => (i === index ? { ...ph, [field]: value } : ph))
+    );
   };
 
   const removePhoto = (index) => {
@@ -154,18 +155,7 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
 
     setSubmitting(true);
     try {
-      // Include any draft photo that was picked but not yet "Add Photo"-clicked
-      const pendingPhoto = newPhoto.file
-        ? [{
-          file: newPhoto.file,
-          preview: newPhoto.preview,
-          description: newPhoto.description,
-          author: newPhoto.author,
-          position: form.content.photos.length,
-          kind: "photo",
-        }]
-        : [];
-      const allPhotos = [...form.content.photos, ...pendingPhoto];
+      const allPhotos = [...form.content.photos];
 
       // 0. Upload logo if there is a pending logo file
       let finalLogoUrl = form.logo_url;
@@ -395,13 +385,12 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
   return {
     tab, setTab,
     form,
-    newPhoto, setNewPhoto,
     logoData, setLogoData,
     submitting,
     set, setSetting, setContent,
     handleCountryChange,
     handlePhoneChange,
-    addPhoto, removePhoto,
+    addPhotos, removePhoto, updatePhotoField,
     handleSubmit,
   };
 };

@@ -1,36 +1,39 @@
-import { useRef } from "react";
-import { Image, Plus, Trash2, Upload } from "lucide-react";
+import { useRef, useState } from "react";
+import { Images, Trash2, Upload } from "lucide-react";
 import { Field } from "@/components/ui/field";
 import { inputCls } from "@/components/ui/input-cls";
 
 /**
- * ContentTab — renders the description, important info, and photo management UI.
+ * ContentTab — description, important info, and multi-photo upload UI.
  *
- * Photo staging flow:
- *  - User picks a local image file via the file input.
- *  - A blob preview URL is generated for the thumbnail.
- *  - The staged photo is stored as { file, preview, description, author }.
- *  - On form submit (handled by usePropertyForm), each file is uploaded to
- *    Supabase and the public URL is resolved before sending to Channex.
+ * Photo flow:
+ *  - User drags files onto the drop zone OR clicks to browse (multi-select supported).
+ *  - Each file is immediately staged into form.content.photos with a blob preview.
+ *  - Description and Author are edited inline per card.
+ *  - On submit, usePropertyForm uploads all staged files and resolves public URLs.
  *
  * Props:
- *  - form        {object}   current form state
- *  - setContent  {function} setContent(key, value) — updates form.content[key]
- *  - newPhoto    {object}   { file, preview, description, author } draft state
- *  - setNewPhoto {function} setter for the draft photo state
- *  - addPhoto    {function} commits the draft photo to form.content.photos
- *  - removePhoto {function} removePhoto(index) — removes a photo by index
+ *  - form            {object}   current form state
+ *  - setContent      {function} setContent(key, value)
+ *  - addPhotos       {function} addPhotos(files[]) — stages multiple files at once
+ *  - removePhoto     {function} removePhoto(index)
+ *  - updatePhotoField {function} updatePhotoField(index, field, value)
  */
-export const ContentTab = ({ form, setContent, newPhoto, setNewPhoto, addPhoto, removePhoto }) => {
+export const ContentTab = ({ form, setContent, addPhotos, removePhoto, updatePhotoField }) => {
   const fileInputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setNewPhoto(p => ({ ...p, file, preview }));
-    // Reset the input so the same file can be re-selected if removed
+    const files = Array.from(e.target.files || []);
+    if (files.length) addPhotos(files);
     e.target.value = "";
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) addPhotos(files);
   };
 
   return (
@@ -54,111 +57,112 @@ export const ContentTab = ({ form, setContent, newPhoto, setNewPhoto, addPhoto, 
       </Field>
 
       {/* Photos */}
-      <div>
-        <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
-          Photos
-        </p>
+      <div className="space-y-4">
+        {/* Drop zone */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <div
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={onDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-200 py-8 px-4 ${
+            isDragging
+              ? "border-green-500 bg-green-500/10 scale-[1.01]"
+              : "border-border hover:border-green-500/50 bg-muted/10 hover:bg-green-500/5"
+          }`}
+        >
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
+            isDragging ? "bg-green-500/20" : "bg-muted/40"
+          }`}>
+            <Images className={`w-6 h-6 transition-colors ${
+              isDragging ? "text-green-500" : "text-muted-foreground/50"
+            }`} />
+          </div>
+          <div className="text-center">
+            <p className={`text-sm font-semibold transition-colors ${
+              isDragging ? "text-green-600 dark:text-green-400" : "text-foreground/70"
+            }`}>
+              {isDragging ? "Drop photos here" : "Drag & drop photos"}
+            </p>
+            <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+              or click to browse · select multiple at once
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+            <Upload className="w-3 h-3 text-green-600 dark:text-green-400" />
+            <span className="text-[11px] font-semibold text-green-600 dark:text-green-400">Choose files</span>
+          </div>
+        </div>
 
-        {/* Staged photos list */}
+        {/* Staged photo list */}
         {form.content.photos.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {form.content.photos.map((ph, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 border border-border group"
-              >
-                <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border">
-                  <img
-                    src={ph.preview || ph.url}
-                    alt={ph.description}
-                    className="w-full h-full object-cover"
-                    onError={e => { e.target.style.display = "none"; }}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground/80 truncate">
-                    {ph.description || "Untitled"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/60 truncate">
-                    {ph.file?.name || (ph.url ? ph.url.split("/").pop() : "Existing photo")}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removePhoto(i)}
-                  className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-red-400 transition-all flex-shrink-0"
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+              Photos
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-green-500/10 text-green-600 dark:text-green-400 normal-case font-bold">
+                {form.content.photos.length}
+              </span>
+            </p>
+            <div className="space-y-2">
+              {form.content.photos.map((ph, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 p-2.5 rounded-xl bg-muted/30 border border-border group transition-shadow hover:shadow-sm"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+                  {/* Thumbnail */}
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border">
+                    <img
+                      src={ph.preview || ph.url}
+                      alt={ph.description || `photo-${i}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  </div>
+
+                  {/* Inline fields */}
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="relative group/desc">
+                      <input
+                        className="w-full text-xs font-medium text-foreground bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 pr-7 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-background transition-all"
+                        placeholder="Add a description…"
+                        value={ph.description}
+                        onChange={(e) => updatePhotoField(i, "description", e.target.value)}
+                      />
+                      <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/40 group-focus-within/desc:text-green-500 transition-colors pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                      </svg>
+                    </div>
+                    <input
+                      className="w-full text-xs text-foreground bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-background transition-all"
+                      placeholder="Author (optional)"
+                      value={ph.author || ""}
+                      onChange={(e) => updatePhotoField(i, "author", e.target.value)}
+                    />
+                    <p className="text-[10px] text-muted-foreground/50 truncate px-0.5">
+                      {ph.isExisting ? "Existing photo" : ph.file?.name}
+                    </p>
+                  </div>
+
+                  {/* Remove */}
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-red-400 transition-all flex-shrink-0 mt-0.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-
-        {/* Add new photo */}
-        <div className="rounded-xl border border-dashed border-border p-4 space-y-3 bg-muted/10">
-          <div className="flex items-center gap-2 text-muted-foreground/60">
-            <Image className="w-4 h-4" />
-            <span className="text-xs font-semibold">Add Photo</span>
-          </div>
-
-          {/* File picker */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className={`w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 text-sm text-muted-foreground hover:text-foreground transition-all ${
-              newPhoto.preview ? "border-green-500/40 bg-green-500/5 text-green-600 dark:text-green-400" : ""
-            }`}
-          >
-            <Upload className="w-3.5 h-3.5" />
-            {newPhoto.preview ? newPhoto.file?.name : "Choose image file…"}
-          </button>
-
-          {/* Preview thumbnail */}
-          {newPhoto.preview && (
-            <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border">
-              <img
-                src={newPhoto.preview}
-                alt="preview"
-                className="w-12 h-12 rounded-lg object-cover border border-border flex-shrink-0"
-              />
-              <p className="text-[10px] text-muted-foreground/70 truncate flex-1">
-                {newPhoto.file?.name}
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              className={inputCls}
-              placeholder="Description"
-              value={newPhoto.description}
-              onChange={e => setNewPhoto(p => ({ ...p, description: e.target.value }))}
-            />
-            <input
-              className={inputCls}
-              placeholder="Author"
-              value={newPhoto.author}
-              onChange={e => setNewPhoto(p => ({ ...p, author: e.target.value }))}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={addPhoto}
-            disabled={!newPhoto.file}
-            className="w-full h-8 rounded-lg bg-green-500/10 hover:bg-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-green-600 dark:text-green-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-green-500/20"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Photo
-          </button>
-        </div>
       </div>
     </div>
   );

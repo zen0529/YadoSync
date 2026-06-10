@@ -1,11 +1,25 @@
 /**
- * Handles file input change for photo upload.
- * Creates an object URL preview for the selected file.
+ * Handles file input change for multi-photo upload.
+ * Converts each selected file into a staged photo object and appends
+ * them all to the form's photo list in one go.
  */
-export const handleFileChange = ({ e, setNewPhoto }) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const preview = URL.createObjectURL(file);
-  setNewPhoto((p) => ({ ...p, file, preview }));
+export const handleFileChange = ({ e, setForm }) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+
+  const newPhotos = files.map((file) => ({
+    file,
+    preview: URL.createObjectURL(file),
+    description: "",
+  }));
+
+  setForm((f) => ({
+    ...f,
+    content: {
+      ...f.content,
+      photos: [...f.content.photos, ...newPhotos],
+    },
+  }));
+
   e.target.value = "";
 };

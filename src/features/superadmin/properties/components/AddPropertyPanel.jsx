@@ -23,13 +23,12 @@ export const AddPropertyPanel = ({ open, onClose, propertyToEdit, editLoading })
   const {
     tab, setTab,
     form,
-    newPhoto, setNewPhoto,
     logoData, setLogoData,
     submitting,
     set, setSetting, setContent,
     handleCountryChange,
     handlePhoneChange,
-    addPhoto, removePhoto,
+    addPhotos, removePhoto, updatePhotoField,
     handleSubmit,
   } = usePropertyForm(open, onClose, propertyToEdit);
 
@@ -78,10 +77,9 @@ export const AddPropertyPanel = ({ open, onClose, propertyToEdit, editLoading })
                 <ContentTab
                   form={form}
                   setContent={setContent}
-                  newPhoto={newPhoto}
-                  setNewPhoto={setNewPhoto}
-                  addPhoto={addPhoto}
+                  addPhotos={addPhotos}
                   removePhoto={removePhoto}
+                  updatePhotoField={updatePhotoField}
                 />
               )}
             </div>

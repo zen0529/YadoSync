@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { BedDouble, X, Loader2, Settings, Image as ImageIcon, Trash2, Upload, Plus } from "lucide-react";
+import { BedDouble, X, Loader2, Settings, Image as ImageIcon, Trash2, Upload, Images } from "lucide-react";
 import { Field } from "@/components/ui/field";
 import { inputCls } from "@/components/ui/input-cls";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { handleSubmitRoomType } from "../utils/handleSubmitRoomType";
 import { handleFileChange } from "../utils/handleFileChange";
-import { addPhoto } from "../utils/addPhoto";
 import { removePhoto } from "../utils/removePhoto";
 
 const TABS = [
@@ -33,7 +32,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
     }
   });
 
-  const [newPhoto, setNewPhoto] = useState({ file: null, preview: null, description: "" });
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (open && roomTypeToEdit) {
@@ -58,7 +57,6 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
         }
       });
       setTab("general");
-      setNewPhoto({ file: null, preview: null, description: "" });
     } else if (open && !roomTypeToEdit) {
       setForm({
         title: "",
@@ -75,35 +73,46 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
         }
       });
       setTab("general");
-      setNewPhoto({ file: null, preview: null, description: "" });
     }
   }, [open, roomTypeToEdit]);
 
   const handleSubmit = (e) =>
-    handleSubmitRoomType({ e, form, newPhoto, onSave, roomTypeToEdit });
+    handleSubmitRoomType({ e, form, onSave, roomTypeToEdit });
 
   const onFileChange = (e) =>
-    handleFileChange({ e, setNewPhoto });
-
-  const onAddPhoto = () =>
-    addPhoto({ newPhoto, setForm, setNewPhoto });
+    handleFileChange({ e, setForm });
 
   const onRemovePhoto = (index) =>
     removePhoto({ index, setForm });
 
+  const onUpdatePhotoDescription = (index, description) =>
+    setForm((f) => ({
+      ...f,
+      content: {
+        ...f.content,
+        photos: f.content.photos.map((ph, i) =>
+          i === index ? { ...ph, description } : ph
+        ),
+      },
+    }));
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileChange({ e: { files: e.dataTransfer.files, target: { value: "" } }, setForm });
+  };
+
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
         onClick={onClose}
       />
 
       <div
-        className={`fixed top-0 right-0 z-50 h-full w-full max-w-[520px] flex flex-col bg-background/80 dark:bg-[#0F172A]/90 backdrop-blur-2xl border-l border-black/5 dark:border-white/10 shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 z-50 h-full w-full max-w-[520px] flex flex-col bg-background/80 dark:bg-[#0F172A]/90 backdrop-blur-2xl border-l border-black/5 dark:border-white/10 shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${open ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 shrink-0">
           <div className="flex items-center gap-3">
@@ -134,11 +143,10 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
-                tab === id
-                  ? "bg-green-500 text-white shadow-md shadow-green-500/25"
-                  : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${tab === id
+                ? "bg-green-500 text-white shadow-md shadow-green-500/25"
+                : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
+                }`}
             >
               <Icon className="w-3.5 h-3.5" />
               {label}
@@ -159,7 +167,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                   <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-4 mb-4">
                     <p className="text-sm text-blue-700 dark:text-blue-300">
                       YadoSync works with bed spaces, Adult beds can sleep adults and children, child beds are for children only.
-                      <br/><br/>
+                      <br /><br />
                       Example: If you have a family room that has 1 double bed and 2 single beds, just enter 4 for adults and 0 for children since children can sleep in adult beds.
                     </p>
                   </div>
@@ -263,101 +271,102 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
               )}
 
               {tab === "content" && (
-                <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
-                    Photos
-                  </p>
-
-                  {form.content.photos.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      {form.content.photos.map((ph, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 border border-border group"
-                        >
-                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border">
-                            <img
-                              src={ph.preview || ph.url}
-                              alt={ph.description}
-                              className="w-full h-full object-cover"
-                              onError={e => { e.target.style.display = "none"; }}
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-foreground/80 truncate">
-                              {ph.description || "Untitled"}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground/60 truncate">
-                              {ph.file?.name || (ph.url ? ph.url.split("/").pop() : "Existing photo")}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => onRemovePhoto(i)}
-                            className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-red-400 transition-all flex-shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="rounded-xl border border-dashed border-border p-4 space-y-3 bg-muted/10">
-                    <div className="flex items-center gap-2 text-muted-foreground/60">
-                      <ImageIcon className="w-4 h-4" />
-                      <span className="text-xs font-semibold">Add Photo</span>
-                    </div>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={onFileChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 text-sm text-muted-foreground hover:text-foreground transition-all ${
-                        newPhoto.preview ? "border-green-500/40 bg-green-500/5 text-green-600 dark:text-green-400" : ""
+                <div className="space-y-4">
+                  {/* Drop zone */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={onFileChange}
+                  />
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={onDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-200 py-8 px-4 ${isDragging
+                      ? "border-green-500 bg-green-500/10 scale-[1.01]"
+                      : "border-border hover:border-green-500/50 bg-muted/10 hover:bg-green-500/5"
                       }`}
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      {newPhoto.preview ? newPhoto.file?.name : "Choose image file…"}
-                    </button>
+                  >
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isDragging ? "bg-green-500/20" : "bg-muted/40"
+                      }`}>
+                      <Images className={`w-6 h-6 transition-colors ${isDragging ? "text-green-500" : "text-muted-foreground/50"
+                        }`} />
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-sm font-semibold transition-colors ${isDragging ? "text-green-600 dark:text-green-400" : "text-foreground/70"
+                        }`}>
+                        {isDragging ? "Drop photos here" : "Drag & drop photos"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                        or click to browse · select multiple at once
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <Upload className="w-3 h-3 text-green-600 dark:text-green-400" />
+                      <span className="text-[11px] font-semibold text-green-600 dark:text-green-400">Choose files</span>
+                    </div>
+                  </div>
 
-                    {newPhoto.preview && (
-                      <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border">
-                        <img
-                          src={newPhoto.preview}
-                          alt="preview"
-                          className="w-12 h-12 rounded-lg object-cover border border-border flex-shrink-0"
-                        />
-                        <p className="text-[10px] text-muted-foreground/70 truncate flex-1">
-                          {newPhoto.file?.name}
+                  {/* Staged photo grid */}
+                  {form.content.photos.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                          Photos
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-green-500/10 text-green-600 dark:text-green-400 normal-case font-bold">
+                            {form.content.photos.length}
+                          </span>
                         </p>
                       </div>
-                    )}
-
-                    <div className="grid grid-cols-1 gap-2">
-                      <input
-                        className={inputCls}
-                        placeholder="Description"
-                        value={newPhoto.description}
-                        onChange={e => setNewPhoto(p => ({ ...p, description: e.target.value }))}
-                      />
+                      <div className="space-y-2">
+                        {form.content.photos.map((ph, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 border border-border group transition-shadow hover:shadow-sm"
+                          >
+                            {/* Thumbnail */}
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border">
+                              <img
+                                src={ph.preview || ph.url}
+                                alt={ph.description || `photo-${i}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.target.style.display = "none"; }}
+                              />
+                            </div>
+                            {/* Inline description */}
+                            <div className="flex-1 min-w-0">
+                              <div className="relative group/desc">
+                                <input
+                                  className="w-full text-xs font-medium text-foreground bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 pr-7 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-background transition-all"
+                                  placeholder="Add a description…"
+                                  value={ph.description}
+                                  onChange={(e) => onUpdatePhotoDescription(i, e.target.value)}
+                                />
+                                <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/40 group-focus-within/desc:text-green-500 transition-colors pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                                </svg>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground/50 truncate mt-1 px-0.5">
+                                {ph.isExisting ? "Existing photo" : ph.file?.name}
+                              </p>
+                            </div>
+                            {/* Remove */}
+                            <button
+                              type="button"
+                              onClick={() => onRemovePhoto(i)}
+                              className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-red-400 transition-all flex-shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={onAddPhoto}
-                      disabled={!newPhoto.file}
-                      className="w-full h-8 rounded-lg bg-green-500/10 hover:bg-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-green-600 dark:text-green-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-green-500/20"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add Photo
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
             </div>

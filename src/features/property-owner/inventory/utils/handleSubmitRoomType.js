@@ -1,17 +1,8 @@
 /**
  * Handles the room type form submission.
- * Auto-stages any pending photo that was selected but not explicitly added.
+ * Photos are already fully staged in form.content.photos — no pending state needed.
  */
-export const handleSubmitRoomType = ({ e, form, newPhoto, onSave, roomTypeToEdit }) => {
+export const handleSubmitRoomType = ({ e, form, onSave, roomTypeToEdit }) => {
   e.preventDefault();
-
-  const finalForm = { ...form };
-  if (newPhoto.file) {
-    finalForm.content = {
-      ...finalForm.content,
-      photos: [...finalForm.content.photos, newPhoto],
-    };
-  }
-
-  onSave(finalForm, roomTypeToEdit?.id);
+  onSave(form, roomTypeToEdit?.id);
 };
