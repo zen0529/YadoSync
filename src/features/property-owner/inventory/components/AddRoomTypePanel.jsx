@@ -4,6 +4,10 @@ import { Field } from "@/components/ui/field";
 import { inputCls } from "@/components/ui/input-cls";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { handleSubmitRoomType } from "../utils/handleSubmitRoomType";
+import { handleFileChange } from "../utils/handleFileChange";
+import { addPhoto } from "../utils/addPhoto";
+import { removePhoto } from "../utils/removePhoto";
 
 const TABS = [
   { id: "general", label: "General", icon: Settings },
@@ -75,50 +79,17 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
     }
   }, [open, roomTypeToEdit]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Automatically stage any pending photo that was selected but not explicitly added
-    const finalForm = { ...form };
-    if (newPhoto.file) {
-      finalForm.content = {
-        ...finalForm.content,
-        photos: [...finalForm.content.photos, newPhoto]
-      };
-    }
-    
-    onSave(finalForm, roomTypeToEdit?.id);
-  };
+  const handleSubmit = (e) =>
+    handleSubmitRoomType({ e, form, newPhoto, onSave, roomTypeToEdit });
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setNewPhoto(p => ({ ...p, file, preview }));
-    e.target.value = "";
-  };
+  const onFileChange = (e) =>
+    handleFileChange({ e, setNewPhoto });
 
-  const addPhoto = () => {
-    if (!newPhoto.file && !newPhoto.url) return;
-    setForm(f => ({
-      ...f,
-      content: {
-        ...f.content,
-        photos: [...f.content.photos, newPhoto]
-      }
-    }));
-    setNewPhoto({ file: null, preview: null, description: "" });
-  };
+  const onAddPhoto = () =>
+    addPhoto({ newPhoto, setForm, setNewPhoto });
 
-  const removePhoto = (index) => {
-    setForm(f => ({
-      ...f,
-      content: {
-        ...f.content,
-        photos: f.content.photos.filter((_, i) => i !== index)
-      }
-    }));
-  };
+  const onRemovePhoto = (index) =>
+    removePhoto({ index, setForm });
 
   return (
     <>
@@ -322,7 +293,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                           </div>
                           <button
                             type="button"
-                            onClick={() => removePhoto(i)}
+                            onClick={() => onRemovePhoto(i)}
                             className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-red-400 transition-all flex-shrink-0"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -343,7 +314,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleFileChange}
+                      onChange={onFileChange}
                     />
                     <button
                       type="button"
@@ -379,7 +350,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                     </div>
                     <button
                       type="button"
-                      onClick={addPhoto}
+                      onClick={onAddPhoto}
                       disabled={!newPhoto.file}
                       className="w-full h-8 rounded-lg bg-green-500/10 hover:bg-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-green-600 dark:text-green-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-green-500/20"
                     >
