@@ -19,18 +19,18 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
   const { roomTypes, loading: rtLoading, createRoomType, updateRoomType, deleteRoomType } =
     useRoomTypes(propertyId, channexPropertyId);
 
-  const [isPanelOpen, setIsPanelOpen]     = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [roomTypeToEdit, setRoomTypeToEdit] = useState(null);
-  const [rtSubmitting, setRtSubmitting]   = useState(false);
-  const [fetchingId, setFetchingId]       = useState(null);
+  const [rtSubmitting, setRtSubmitting] = useState(false);
+  const [fetchingId, setFetchingId] = useState(null);
 
   /* ── Rate plan state ─────────────────────────────────────────────────── */
   const { ratePlans, loading: rpLoading, createRatePlan, updateRatePlan, deleteRatePlan } =
     useRatePlans(propertyId, channexPropertyId);
 
-  const [isRpPanelOpen, setIsRpPanelOpen]   = useState(false);
+  const [isRpPanelOpen, setIsRpPanelOpen] = useState(false);
   const [ratePlanToEdit, setRatePlanToEdit] = useState(null);
-  const [rpSubmitting, setRpSubmitting]     = useState(false);
+  const [rpSubmitting, setRpSubmitting] = useState(false);
   const [defaultRoomTypeId, setDefaultRoomTypeId] = useState(null);
 
   /* ── Expand / collapse state ─────────────────────────────────────────── */
@@ -308,14 +308,12 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
             >
               <div className="px-4 py-3 space-y-2 bg-black/[0.015] dark:bg-white/[0.015]">
                 {plans.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-4 gap-1.5">
-                    <Tag className="w-6 h-6 text-muted-foreground/30" />
-                    <p className="text-xs text-muted-foreground/60">No rate plans yet.</p>
+                  <div className="flex flex-col items-center justify-center gap-1.5">
                     <button
                       onClick={() => handleAddRp(rt.id)}
                       className="text-xs text-green-500 hover:text-green-600 font-medium mt-0.5 transition-colors"
                     >
-                      + Add one now
+                      + Add Rate Plan
                     </button>
                   </div>
                 ) : (
