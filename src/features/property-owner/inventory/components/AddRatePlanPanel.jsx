@@ -20,7 +20,7 @@ const CURRENCIES = ["PHP", "USD", "EUR", "SGD", "AUD", "GBP", "JPY"];
  *  - submitting      {boolean}    shows spinner on submit button
  *  - roomTypes       {Array}      list of room types for this property
  */
-export const AddRatePlanPanel = ({ open, onClose, ratePlanToEdit, onSave, submitting, roomTypes = [] }) => {
+export const AddRatePlanPanel = ({ open, onClose, ratePlanToEdit, onSave, submitting, roomTypes = [], defaultRoomTypeId = null }) => {
   const [form, setForm] = useState({
     title:      "",
     roomTypeId: "",
@@ -42,13 +42,13 @@ export const AddRatePlanPanel = ({ open, onClose, ratePlanToEdit, onSave, submit
     } else if (open && !ratePlanToEdit) {
       setForm({
         title:      "",
-        roomTypeId: "",
+        roomTypeId: defaultRoomTypeId ?? "",
         currency:   "PHP",
         sell_mode:  "per_room",
         rate_mode:  "manual",
       });
     }
-  }, [open, ratePlanToEdit]);
+  }, [open, ratePlanToEdit, defaultRoomTypeId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -123,9 +123,10 @@ export const AddRatePlanPanel = ({ open, onClose, ratePlanToEdit, onSave, submit
                   <Select
                     value={form.roomTypeId}
                     onValueChange={v => setForm(f => ({ ...f, roomTypeId: v }))}
+                    disabled={!!defaultRoomTypeId}
                     required
                   >
-                    <SelectTrigger className="w-full glass-filter-btn rounded-xl border-white/20 h-10 text-sm">
+                    <SelectTrigger className="w-full glass-filter-btn rounded-xl border-white/20 h-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       <SelectValue placeholder="Select a room type..." />
                     </SelectTrigger>
                     <SelectContent className="glass-dropdown rounded-xl border-white/30">

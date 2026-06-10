@@ -2,21 +2,14 @@ import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ImportOtaModal } from "../components/ImportOtaModal";
-import { BedDouble, Tag, Download, Loader2 } from "lucide-react";
+import { BedDouble, Download, Loader2 } from "lucide-react";
 import { useInventory } from "../hooks/useInventory";
 import { RoomTypesTab } from "../components/RoomTypesTab";
-import { RatePlansTab } from "../components/RatePlansTab";
-
-const INVENTORY_TABS = [
-  { id: "room_types", label: "Room Types", icon: BedDouble },
-  { id: "rate_plans", label: "Rate Plans", icon: Tag },
-];
 
 export const InventoryPage = () => {
   const { property, loading } = useInventory();
   const [resortFilter, setResortFilter] = useState("all");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("room_types");
 
   return (
     <div className="flex flex-col h-full">
@@ -53,27 +46,6 @@ export const InventoryPage = () => {
         </div>
       </div>
 
-      {/* Tab Nav */}
-      <div className="flex mb-4 shrink-0">
-        {INVENTORY_TABS.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 py-2.5 px-1 mr-6 text-xs font-semibold border-b-2 transition-all duration-200
-                ${activeTab === tab.id
-                  ? "border-green-500 text-green-600 dark:text-green-400"
-                  : "border-transparent text-muted-foreground/60 hover:text-foreground hover:border-border"
-                }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto custom-scrollbar pb-6">
         {loading ? (
@@ -90,14 +62,7 @@ export const InventoryPage = () => {
             <p className="text-sm text-muted-foreground/60 text-center max-w-xs">You need a property set up before managing room types.</p>
           </div>
         ) : (
-          <div className="flex-1">
-            <div className={activeTab === "room_types" ? "block" : "hidden"}>
-              <RoomTypesTab propertyId={property.id} channexPropertyId={property.channex_property_id} />
-            </div>
-            <div className={activeTab === "rate_plans" ? "block" : "hidden"}>
-              <RatePlansTab propertyId={property.id} channexPropertyId={property.channex_property_id} />
-            </div>
-          </div>
+          <RoomTypesTab propertyId={property.id} channexPropertyId={property.channex_property_id} />
         )}
       </div>
 
