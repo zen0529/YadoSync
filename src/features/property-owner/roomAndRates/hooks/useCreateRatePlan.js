@@ -10,22 +10,26 @@ export const useCreateRatePlan = () => {
     roomTypeId,
     channexPropertyId,
     channexRoomTypeId,
-    form
+    form,
   }) => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: functionError } = await supabase.functions.invoke("create-rate-plan", {
-        body: {
-          propertyId,
-          roomTypeId,
-          channexPropertyId,
-          channexRoomTypeId,
-          form,
+      const { data, error: functionError } = await supabase.functions.invoke(
+        "createRatePlan",
+        {
+          body: {
+            propertyId,
+            roomTypeId,
+            channexPropertyId,
+            channexRoomTypeId,
+            form,
+          },
         },
-      });
+      );
 
-      if (functionError) throw new Error(`Function Error: ${functionError.message}`);
+      if (functionError)
+        throw new Error(`Function Error: ${functionError.message}`);
       if (data?.error) throw new Error(data.error);
 
       return data.row;
