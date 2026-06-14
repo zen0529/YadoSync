@@ -4,127 +4,174 @@
 
 | Done | Feature |
 |---|---|
-| ✅ | Superadmin: Create / Update / View All Properties (Channex + Supabase) |
+| ✅ | Superadmin: Create / Update / View All Properties (Channex + Supabase dual-write) |
 | ✅ | Property owner account auto-created on property creation |
 | ✅ | Property owner can log in |
-| ✅ | Connections page (OTA platform connect/disconnect UI) |
-| ✅ | Inventory page shell (UI exists, uses dummy data) |
-| ✅ | Channex as backbone (property API done) |
-| ✅ | **Phase 1: Room Types** (CRUD via Channex + Supabase, Owner Dashboard UI) |
+| ✅ | Connections page (OTA platform connect/disconnect UI — shell only) |
+| ✅ | Inventory page shell (UI exists, wired to real Supabase data) |
+| ✅ | Channex as backbone (property API fully done, photos, address, groups) |
+| ✅ | **Phase 1: Room Types** — full CRUD via Channex + Supabase, property owner can create/edit/delete |
+| ✅ | **Phase 2: Rate Plans** — full CRUD via Channex + Supabase, nested under room types in the Owner Dashboard |
+
+> **Note (fixed):** `useCreateRatePlan` was invoking `"create-rate-plan"` (hyphenated) instead of `"createRatePlan"` — corrected to match the actual edge function folder name.
 
 ---
 
-## 📍 Where We Are Currently At: **Phase 2 (Rate Plans)**
-
-We have successfully completed **Phase 1 (Room Types)**. You now have a working Channex integration for Room Types and a beautiful glass UI in the Property Owner dashboard to manage them. 
-
-*(Reminder: You just need to run the `room_types` SQL migration in your Supabase dashboard to finalize the database connection).*
-
-Our next major milestone is **Phase 2: Rate Plans**. Without Rate Plans, room types cannot have prices or availability in Channex.
-
-You can't have real bookings, rates, or availability management until **Room Types** exist in Channex. In Channex's data model:
+## Channex Data Model (dependency chain)
 
 ```
-Property → Room Types → Rate Plans → Bookings
+Property → Room Types → Rate Plans → ARI (Availability + Rates) → OTA Channels → Bookings
 ```
 
-A booking always belongs to a Room Type. A Rate Plan belongs to a Room Type. You cannot sync availability without Room Types. This is the hard dependency.
+Each layer is required before the next is meaningful. Phases 1 & 2 completed the first three levels. The property is fully configured in Channex but **not yet bookable** — no availability or prices have been pushed.
 
 ---
 
-## The 6-Phase Roadmap
+## 📍 Where We Are: **Phase 3 (ARI Push)**
+
+Room types and rate plans exist in Channex but:
+- Every room shows **0 availability** (Channex default on creation)
+- No rate is set on any date — guests see nothing bookable on any OTA
+- The Inventory page has no real calendar/pricing editor yet
+
+Phase 3 makes the property actually visible and bookable on OTAs.
+
+---
+
+## The Roadmap
 
 ### ✅ Phase 1 — Room Types (COMPLETED)
 
-> **Goal: Allow properties to have physical rooms configured.**
+Property owner can create, edit, and delete room types from the Inventory page. Each mutation goes to Channex first, then mirrors to Supabase (`room_types` table). Rollback on Supabase failure.
 
-**Why not import from OTA first?**
-- Channex's "import from OTA" feature requires the property to already have Room Types set up in Channex — it maps OTA listings *to* existing room types, not the other way around.
-- Importing from OTA via Channex is a **mapping operation**, not a creation operation.
-- Building manually first gives you full control and teaches you the Channex Room Type API before dealing with OTA mapping complexity.
+**Channex API used:** `POST /room_types`, `PUT /room_types/:id`, `DELETE /room_types/:id`
+
+---
+
+### ✅ Phase 2 — Rate Plans (COMPLETED)
+
+Rate plans are nested under room types in the Inventory page. Property owner can add, edit, and delete rate plans per room type. Same dual-write pattern with rollback.
+
+**Channex API used:** `POST /rate_plans`, `PUT /rate_plans/:id`, `DELETE /rate_plans/:id`
+
+---
+
+### 📍 Phase 3 — ARI Push (Availability + Rates) — CURRENT FOCUS
+
+> **Goal: Make the property bookable on OTAs.**
+
+Without an ARI push, everything built in Phases 1 & 2 is invisible to OTAs. Channex sets room type availability to 0 on creation and sets no prices on rate plans.
+
+**Two Channex endpoints, always sent as separate messages:**
+- `POST /availability` — per room type, sets how many rooms are available per date
+- `POST /restrictions` — per rate plan, sets rate + min_stay + stop_sell etc.
+
+**Rules (from the `channex-pms-integration` skill):**
+
+| Rule | Detail |
+|---|---|
+| **Compress ranges** | Run-length encode consecutive equal values into `date_from`/`date_to` entries |
+| **Push deltas, not the world** | On creation: push initial values. On edit: push only what changed and only changed fields (Channex applies partial restriction updates) |
+| **Debounce** | Coalesce rapid edits into one push via a job queue |
+| **Never send past dates** | Filter `date >= today` before every push |
+| **Verify with a readback** | `GET /availability` and `GET /restrictions?...&filter[restrictions]=rate` — do not trust the 200 alone |
 
 **What to build:**
-- **Superadmin side**: Ability to add/edit/delete Room Types per property (since superadmin sets up properties)
-- **Channex API calls**: `POST /api/v1/room_types`, `PUT /api/v1/room_types/:id`, `DELETE /api/v1/room_types/:id`
-- **Supabase table**: `room_types` — mirrors the Channex data locally for fast queries
-- **Property Owner side**: View-only list of their room types (they don't create rooms, superadmin does)
 
-**Channex Room Type fields you'll need:**
-| Field | Description |
-|---|---|
-| `title` | Room type name (e.g., "Deluxe Room", "Studio Suite") |
-| `property_id` | Channex property ID |
-| `count_of_rooms` | Number of physical rooms of this type |
-| `occ_adults` | Max adult occupancy | 
-| `occ_children` | Max children occupancy | 
-| `occ_infants` | Max infant occupancy | 
-| `default_occupancy` | Default occupancy | 
-| `capacity` | Total capacity |
+1. **Initial availability push** — when a room type is created, immediately push `count_of_rooms` for the next 365 days
+2. **Initial restriction push** — when a rate plan is created, push a default rate (e.g. 0 or a configured base rate) for the next 365 days
+3. **Inventory / Rates editing UI** — a calendar or date-range editor on the Inventory page where property owners set per-date prices and availability
+4. **On-save push** — every save in the editor triggers an ARI delta push (only changed dates, only changed fields)
+5. **Periodic full push** — hourly drift-correction job (e.g. Supabase cron) to re-sync everything, so no missed event can permanently desync
+
+**Supabase tables to add (or extend):**
+
+```sql
+-- Store per-date availability (source of truth for UI + push source)
+CREATE TABLE availability (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id uuid REFERENCES properties(id) ON DELETE CASCADE,
+  room_type_id uuid REFERENCES room_types(id) ON DELETE CASCADE,
+  date date NOT NULL,
+  available integer NOT NULL DEFAULT 0,
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE (room_type_id, date)
+);
+
+-- Store per-date restrictions (source of truth for UI + push source)
+CREATE TABLE restrictions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id uuid REFERENCES properties(id) ON DELETE CASCADE,
+  rate_plan_id uuid REFERENCES rate_plans(id) ON DELETE CASCADE,
+  date date NOT NULL,
+  rate integer NOT NULL DEFAULT 0,        -- in MINOR units (cents)
+  min_stay_arrival integer DEFAULT 1,
+  stop_sell boolean DEFAULT false,
+  closed_to_arrival boolean DEFAULT false,
+  closed_to_departure boolean DEFAULT false,
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE (rate_plan_id, date)
+);
+```
+
+> **Money units:** Channex expects rates as integers in **minor units (cents)** on writes. Rates come back as decimal strings ("138.00") on reads. Convert at the API boundary only.
 
 ---
 
-### 📍 Phase 2 — Rate Plans (CURRENT FOCUS)
+### Phase 4 — Inbound Bookings (OTA → YadoSync)
 
-After room types exist, you need Rate Plans — because Channex requires at least one Rate Plan per Room Type before availability/pricing can be managed.
+> **Goal: OTA bookings automatically appear in YadoSync.**
+
+Channex delivers OTA bookings as **revisions** with a 30-minute expiry window. The robust setup uses both:
+
+- **Feed poller** (start here): `GET /booking_revisions/feed` every minute → apply → `POST /booking_revisions/:id/ack`
+- **Webhook endpoint**: `POST /webhooks` to register a callback → on event, pull revision by id → apply → ack
+
+**Key rules:**
+- Ack **only after** successfully writing the booking to Supabase — if writing fails, leave un-acked so it retries
+- Drain the feed until empty on each poll (don't stop at page 1 if `meta.total > meta.limit`)
+- Dedupe by `channex_booking_id` (look up in mapping before inserting)
+- Never drop an OTA booking — if overbooked, flag it; don't reject
+- `modified` revisions: flag for manual review, don't auto-apply (see skill for reasoning)
+- Recovery after outage: one-shot `GET /bookings?filter[inserted_at][gte]=<outage_start>` — not a periodic sweep
 
 **What to build:**
-- Superadmin creates Rate Plans linked to Room Types
-- Channex API: `POST /api/v1/rate_plans`, `PUT /api/v1/rate_plans/:id`
-- Supabase table: `rate_plans`
-- Property owner can view Rate Plans for their property
-
-**Minimum viable Rate Plan fields:**
-| Field | Description |
-|---|---|
-| `title` | e.g., "Standard Rate", "Non-refundable" |
-| `room_type_id` | Linked room type (Channex ID) |
-| `currency` | ISO currency code |
-| `sell_mode` | `per_room` or `per_person` |
-| `rate_mode` | `manual` or `derived` |
-| `cancellation_policy_id` | From Channex |
+1. `bookings` Supabase table (with `channex_booking_id`, `ota_name`, `ota_reservation_code`, status, guest info, dates, amount)
+2. `pollBookingFeed` Supabase edge function (scheduled every minute)
+3. `channex-webhook` Supabase edge function (HTTP endpoint, registered with Channex)
+4. Booking apply logic: new / cancelled / modified handling
+5. Property owner Bookings page wired to real data
 
 ---
 
-### 🥉 Phase 3 — Availability & Rates (Inventory page becomes real)
+### Phase 5 — OTA Channel Connections (Make Connections page functional)
 
-Once Room Types + Rate Plans exist, the **Inventory page** and a new **Rates page** become meaningful:
+> **Goal: Property owner connects their Booking.com / Airbnb / etc. account through Channex.**
 
-- **Inventory page** (already has UI shell): wire up real Channex data for room availability per date
-- **Rates page** (already has route in `App.jsx`): property owner sets prices per room type per date range
-- **Channex API**: `POST /api/v1/availabilities` (set availability), `POST /api/v1/rates` (set prices)
+The Connections page UI exists but is a stub. This phase wires it to the Channex Channel API (requires **Channel API access** on the Channex account).
 
----
+**Flow:**
+1. `POST /channels/test_connection` — test OTA credentials (hotel_id)
+2. `POST /channels/mapping_details` — read OTA's rooms and rate codes
+3. Map OTA room+rate codes to YadoSync rate plans
+4. `POST /channels` — create the channel with the mapping
+5. `POST /channels/:id/activate` — go live
 
-### Phase 4 — OTA Connections (Make the Connections page functional)
-
-The Connections page UI exists but is wired to Beds24, not Channex. Once rooms + rates exist:
-
-- Map your Channex Room Types to OTA Room Type IDs
-- This is the "import from OTA" workflow you were thinking of — it's actually a **room type mapping**, not a room import
-- Channex handles the OTA sync automatically once mapping is done
-
----
-
-### Phase 5 — Bookings
-
-Once the above is done, bookings will start flowing from OTAs via Channex webhooks. Build:
-
-- Channex webhook endpoint (Supabase Edge Function) to receive bookings
-- Save to `bookings` table
-- Property owner Bookings page (route already exists)
-- Superadmin Bookings page (route already exists)
-- Notifications (email/SMS) on new booking
+**Critical traps (from skill):**
+- Room/rate codes from OTAs come back as **integers** — send them as integers, not strings
+- `group_id` is required — fetch `GET /groups` and use the group that owns the property
+- Channels are created **inactive** — must explicitly activate
+- Delete requires deactivation first
 
 ---
 
 ### Phase 6 — Dashboard & Analytics
 
 With real bookings data, the Dashboard and Analytics pages become meaningful:
-
-- Revenue metrics
-- Occupancy rate
+- Revenue metrics (total, by OTA, by room type)
+- Occupancy rate per date range
 - Commission tracking
-- Platform breakdown
+- Platform breakdown chart
 
 ---
 
@@ -132,54 +179,46 @@ With real bookings data, the Dashboard and Analytics pages become meaningful:
 
 | Phase | Feature | Who | Unblocks | Status |
 |---|---|---|---|---|
-| **1** | Room Types | Property Owner creates/views | Everything else | ✅ Done |
-| **2** | Rate Plans | Superadmin creates, Owner views | Availability & Pricing | 📍 **Current** |
-| **3** | Availability + Rates | Owner manages | Real Inventory page | ⏳ Pending |
-| **4** | OTA Connections / Room Mapping | Owner maps | OTA sync | ⏳ Pending |
-| **5** | Bookings (webhooks) | Automated + Owner views | Revenue data | ⏳ Pending |
+| **1** | Room Types | Superadmin + Property Owner | Rate Plans | ✅ Done |
+| **2** | Rate Plans | Superadmin + Property Owner | ARI Push | ✅ Done |
+| **3** | ARI Push (Availability + Rates) | Property Owner manages dates/prices | Bookings can flow | 📍 **Current** |
+| **4** | Inbound Bookings (feed + webhook) | Automated + Owner views | Revenue data | ⏳ Pending |
+| **5** | OTA Channel Connections | Property Owner maps OTA rooms | OTA sync live | ⏳ Pending |
 | **6** | Dashboard + Analytics | Owner views | Business insights | ⏳ Pending |
 
 ---
 
-## Supabase Tables to Add
+## Supabase Edge Functions (current)
 
-```sql
--- room_types
-CREATE TABLE room_types (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id uuid REFERENCES properties(id) ON DELETE CASCADE,
-  channex_room_type_id text NOT NULL,
-  title text NOT NULL,
-  count_of_rooms integer DEFAULT 1,
-  occ_adults integer DEFAULT 2,
-  occ_children integer DEFAULT 0,
-  occ_infants integer DEFAULT 0,
-  default_occupancy integer DEFAULT 2,
-  capacity integer DEFAULT 2,
-  created_at timestamptz DEFAULT now()
-);
+| Function | Purpose |
+|---|---|
+| `createProperty` | Auth user + Channex property + Supabase row + email |
+| `updateProperty` | Channex PUT + Supabase update + photo sync |
+| `delete-property` | Channex DELETE + Supabase delete |
+| `createRoomType` | Channex POST + Supabase insert + rollback |
+| `updateRoomType` | Channex PUT + Supabase update |
+| `deleteRoomType` | Channex DELETE + Supabase delete |
+| `createRatePlan` | Channex POST + Supabase insert + rollback |
+| `updateRatePlan` | Channex PUT + Supabase update |
+| `deleteRatePlan` | Channex DELETE + Supabase delete |
 
--- rate_plans
-CREATE TABLE rate_plans (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id uuid REFERENCES properties(id) ON DELETE CASCADE,
-  room_type_id uuid REFERENCES room_types(id) ON DELETE CASCADE,
-  channex_rate_plan_id text NOT NULL,
-  title text NOT NULL,
-  currency text NOT NULL DEFAULT 'PHP',
-  sell_mode text DEFAULT 'per_room',
-  rate_mode text DEFAULT 'manual',
-  created_at timestamptz DEFAULT now()
-);
-```
+**To add in Phase 3:**
+- `pushAvailability` — POST to Channex `/availability` with range compression
+- `pushRestrictions` — POST to Channex `/restrictions` with delta + range compression
+
+**To add in Phase 4:**
+- `pollBookingFeed` — scheduled, polls feed, applies revisions, acks
+- `channex-webhook` — HTTP endpoint, receives Channex booking events
 
 ---
 
-## Immediate Next Action
+## Environment Variables Required
 
-**Start with Phase 2: Rate Plans**
-
-1. Run the `room_types` SQL script in Supabase (if you haven't yet).
-2. Design the `rate_plans` SQL schema.
-3. Add Channex API calls for rate plans in `src/features/superadmin/properties/channex/`
-4. Build the Rate Plans UI for Superadmins to attach pricing plans to properties.
+| Variable | Where set | Notes |
+|---|---|---|
+| `CHANNEX_BASE_URL` | Supabase secrets | `https://staging.channex.io` (staging) or `https://app.channex.io` (prod) |
+| `CHANNEX_API_KEY` | Supabase secrets | Never in source control |
+| `SUPABASE_URL` | Auto-injected | — |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase secrets | Used by admin-level edge functions |
+| `SUPABASE_ANON_KEY` | Auto-injected | Used by user-scoped edge functions |
+| `SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD` | Supabase secrets | For owner welcome email |
