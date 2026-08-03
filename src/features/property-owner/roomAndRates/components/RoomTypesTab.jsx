@@ -1,10 +1,23 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRoomTypes } from "../hooks/useRoomTypes";
-import { useRatePlans } from "../hooks/useRatePlans";
+import { useGetRatePlans } from "../hooks/useGetRatePlans";
+import { useCreateRatePlan } from "../hooks/useCreateRatePlan";
+import { useUpdateRatePlan } from "../hooks/useUpdateRatePlan";
+import { useDeleteRatePlan } from "../hooks/useDeleteRatePlan";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, Plus, Edit2, Trash2, Users, BedDouble,
-  Tag, ChevronDown, CreditCard, ChevronsDownUp, ChevronsUpDown,
+  Loader2,
+  Plus,
+  Edit2,
+  Trash2,
+  Users,
+  BedDouble,
+  Tag,
+  ChevronDown,
+  CreditCard,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  CalendarDays,
 } from "lucide-react";
 import { AddRoomTypePanel } from "./AddRoomTypePanel";
 import { AddRatePlanPanel } from "./AddRatePlanPanel";
@@ -14,10 +27,22 @@ import { handleSaveRatePlan } from "../utils/handleSaveRatePlan";
 import { handleDeleteRatePlan } from "../utils/handleDeleteRatePlan";
 import { getRoomTypeById } from "../supabase/getRoomType";
 
-export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
+export const RoomTypesTab = ({
+  propertyId,
+  channexPropertyId,
+  initialRoomTypes,
+  onOpenARIEditor,
+  onRoomTypesLoaded,
+  onRatePlansLoaded,
+}) => {
   /* ── Room type state ─────────────────────────────────────────────────── */
-  const { roomTypes, loading: rtLoading, createRoomType, updateRoomType, deleteRoomType } =
-    useRoomTypes(propertyId, channexPropertyId);
+  const {
+    roomTypes,
+    loading: rtLoading,
+    createRoomType,
+    updateRoomType,
+    deleteRoomType,
+  } = useRoomTypes(propertyId, channexPropertyId, initialRoomTypes);
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [roomTypeToEdit, setRoomTypeToEdit] = useState(null);
@@ -25,29 +50,41 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
   const [fetchingId, setFetchingId] = useState(null);
 
   /* ── Rate plan state ─────────────────────────────────────────────────── */
-  const { ratePlans, loading: rpLoading, createRatePlan, updateRatePlan, deleteRatePlan } =
-    useRatePlans(propertyId, channexPropertyId);
+  const { ratePlans, loading: rpLoading } = useGetRatePlans(propertyId);
+  const { createRatePlan } = useCreateRatePlan();
+  const { updateRatePlan } = useUpdateRatePlan();
+  const { deleteRatePlan } = useDeleteRatePlan();
 
   const [isRpPanelOpen, setIsRpPanelOpen] = useState(false);
   const [ratePlanToEdit, setRatePlanToEdit] = useState(null);
   const [rpSubmitting, setRpSubmitting] = useState(false);
   const [defaultRoomTypeId, setDefaultRoomTypeId] = useState(null);
 
+  /* ── Lift loaded data to parent (InventoryPage holds it for ARIEditorPanel) ─ */
+  useEffect(() => {
+    if (onRoomTypesLoaded) onRoomTypesLoaded(roomTypes);
+  }, [roomTypes]); // eslint-disable-line
+
+  useEffect(() => {
+    if (onRatePlansLoaded) onRatePlansLoaded(ratePlans);
+  }, [ratePlans]); // eslint-disable-line
+
   /* ── Expand / collapse state ─────────────────────────────────────────── */
   const [expandedIds, setExpandedIds] = useState(new Set());
 
-  const allExpanded = roomTypes.length > 0 && expandedIds.size === roomTypes.length;
+  const allExpanded =
+    roomTypes.length > 0 && expandedIds.size === roomTypes.length;
 
   const toggleExpandAll = () => {
     if (allExpanded) {
       setExpandedIds(new Set());
     } else {
-      setExpandedIds(new Set(roomTypes.map(rt => rt.id)));
+      setExpandedIds(new Set(roomTypes.map((rt) => rt.id)));
     }
   };
 
   const toggleExpand = (id) => {
-    setExpandedIds(prev => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
@@ -91,12 +128,21 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
 
   const handleSaveRt = (formData, localId) =>
     handleSaveRoomType({
-      formData, localId, roomTypes, createRoomType, updateRoomType,
-      setSubmitting: setRtSubmitting, handleClose: handleCloseRt,
+      formData,
+      localId,
+      roomTypes,
+      createRoomType,
+      updateRoomType,
+      setSubmitting: setRtSubmitting,
+      handleClose: handleCloseRt,
     });
 
   const handleDeleteRt = (rt) =>
-    handleDeleteRoomType({ rt, deleteRoomType, setSubmitting: setRtSubmitting });
+    handleDeleteRoomType({
+      rt,
+      deleteRoomType,
+      setSubmitting: setRtSubmitting,
+    });
 
   /* ── Rate plan handlers ──────────────────────────────────────────────── */
   const handleAddRp = (roomTypeId) => {
@@ -104,7 +150,7 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
     setDefaultRoomTypeId(roomTypeId);
     setIsRpPanelOpen(true);
     // Auto-expand so user sees the new plan appear
-    setExpandedIds(prev => new Set([...prev, roomTypeId]));
+    setExpandedIds((prev) => new Set([...prev, roomTypeId]));
   };
 
   const handleEditRp = (rp) => {
@@ -121,28 +167,43 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
     }, 300);
   };
 
-  const handleSaveRp = (form, localId) =>
+  const handleSaveRp = (form, localId, roomTypeId) =>
     handleSaveRatePlan({
-      form, localId, ratePlans, roomTypes, createRatePlan, updateRatePlan,
-      setSubmitting: setRpSubmitting, handleClose: handleCloseRp,
+      form,
+      localId,
+      roomTypeId,
+      ratePlans,
+      roomTypes,
+      propertyId,
+      channexPropertyId,
+      createRatePlan,
+      updateRatePlan,
+      setSubmitting: setRpSubmitting,
+      handleClose: handleCloseRp,
     });
 
   const handleDeleteRp = (rp) =>
-    handleDeleteRatePlan({ rp, deleteRatePlan, setSubmitting: setRpSubmitting });
+    handleDeleteRatePlan({
+      rp,
+      deleteRatePlan,
+      setSubmitting: setRpSubmitting,
+    });
 
   /* ── Loading ─────────────────────────────────────────────────────────── */
   if (rtLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-2">
         <Loader2 className="w-6 h-6 animate-spin text-green-500" />
-        <span className="text-sm text-muted-foreground">Loading room types...</span>
+        <span className="text-sm text-muted-foreground">
+          Loading room types...
+        </span>
       </div>
     );
   }
 
   /* ── Render ──────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 border border-black">
       {/* Section header */}
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
@@ -153,12 +214,17 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
             <button
               onClick={toggleExpandAll}
               className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-border/60 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
-              title={allExpanded ? "Collapse all rate plans" : "Expand all rate plans"}
-            >
-              {allExpanded
-                ? <ChevronsDownUp className="w-3.5 h-3.5" />
-                : <ChevronsUpDown className="w-3.5 h-3.5" />
+              title={
+                allExpanded
+                  ? "Collapse all rate plans"
+                  : "Expand all rate plans"
               }
+            >
+              {allExpanded ? (
+                <ChevronsDownUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronsUpDown className="w-3.5 h-3.5" />
+              )}
               {allExpanded ? "Collapse All" : "Expand All"}
             </button>
           )}
@@ -176,12 +242,14 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
       {roomTypes.length === 0 && (
         <div className="rounded-xl border border-dashed border-border py-8 flex flex-col items-center justify-center bg-muted/20">
           <BedDouble className="w-8 h-8 text-muted-foreground/40 mb-2" />
-          <p className="text-sm text-muted-foreground">No room types configured.</p>
+          <p className="text-sm text-muted-foreground">
+            No room types configured.
+          </p>
         </div>
       )}
 
       {/* Room type cards */}
-      {roomTypes.map(rt => {
+      {roomTypes.map((rt) => {
         const isExpanded = expandedIds.has(rt.id);
         const plans = ratePlansByRoomType[rt.id] || [];
 
@@ -196,7 +264,9 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-foreground/90">{rt.title}</h4>
+                    <h4 className="font-semibold text-foreground/90">
+                      {rt.title}
+                    </h4>
                     <span className="text-[10px] font-medium bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded capitalize">
                       {rt.room_kind || "Room"}
                     </span>
@@ -275,9 +345,10 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
             <button
               onClick={() => toggleExpand(rt.id)}
               className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold border-t transition-colors
-                ${isExpanded
-                  ? "border-green-500/20 bg-green-500/5 text-green-600 dark:text-green-400"
-                  : "border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
+                ${
+                  isExpanded
+                    ? "border-green-500/20 bg-green-500/5 text-green-600 dark:text-green-400"
+                    : "border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
                 }`}
             >
               <div className="flex items-center gap-2">
@@ -286,10 +357,12 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
                 {rpLoading ? (
                   <Loader2 className="w-3 h-3 animate-spin opacity-60" />
                 ) : (
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold
-                    ${isExpanded
-                      ? "bg-green-500/15 text-green-600 dark:text-green-400"
-                      : "bg-black/5 dark:bg-white/10 text-muted-foreground"
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold
+                    ${
+                      isExpanded
+                        ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                        : "bg-black/5 dark:bg-white/10 text-muted-foreground"
                     }`}
                   >
                     {plans.length}
@@ -304,20 +377,22 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
             {/* Expandable rate plans section */}
             <div
               className="overflow-hidden transition-all duration-300 ease-in-out"
-              style={{ maxHeight: isExpanded ? `${Math.max(plans.length * 58 + 16, 80)}px` : "0px" }}
+              style={{
+                maxHeight: isExpanded ? "320px" : "0px",
+              }}
             >
-              <div className="px-4 py-3 space-y-2 bg-black/[0.015] dark:bg-white/[0.015]">
-                {plans.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-1.5">
-                    <button
-                      onClick={() => handleAddRp(rt.id)}
-                      className="text-xs text-green-500 hover:text-green-600 font-medium mt-0.5 transition-colors"
-                    >
-                      + Add Rate Plan
-                    </button>
-                  </div>
-                ) : (
-                  plans.map(rp => (
+              <div className="flex flex-col bg-black/[0.015] dark:bg-white/[0.015]">
+                {/* Scrollable plans list — max 3 visible (~3 × 52px + padding) */}
+                <div
+                  className="overflow-y-auto px-4 pt-3 space-y-2"
+                  style={{ maxHeight: "180px" }}
+                >
+                  {plans.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      No rate plans yet.
+                    </p>
+                  )}
+                  {plans.map((rp) => (
                     <div
                       key={rp.id}
                       className="flex items-center justify-between rounded-lg border border-black/5 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2"
@@ -327,13 +402,31 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
                           <CreditCard className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground/90 truncate">{rp.title}</p>
+                          <p className="text-sm font-medium text-foreground/90 truncate">
+                            {rp.title}
+                          </p>
                           <p className="text-[10px] text-muted-foreground/60 capitalize">
-                            {rp.currency} · {rp.sell_mode?.replace("_", " ") || "—"}
+                            {rp.currency} ·{" "}
+                            {rp.sell_mode?.replace("_", " ") || "—"}
                           </p>
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0">
+                        <button
+                          onClick={() =>
+                            onOpenARIEditor &&
+                            onOpenARIEditor({
+                              roomTypes,
+                              ratePlans,
+                              defaultRoomTypeId: rp.room_type_id,
+                              defaultRatePlanId: rp.id,
+                            })
+                          }
+                          className="p-1.5 rounded hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors"
+                          title="Set prices for this rate plan"
+                        >
+                          <CalendarDays className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           onClick={() => handleEditRp(rp)}
                           className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -350,8 +443,19 @@ export const RoomTypesTab = ({ propertyId, channexPropertyId }) => {
                         </button>
                       </div>
                     </div>
-                  ))
-                )}
+                  ))}
+                </div>
+
+                {/* Always-visible Add Rate Plan button */}
+                <div className="px-4 py-2.5 border-t border-black/5 dark:border-white/10">
+                  <button
+                    onClick={() => handleAddRp(rt.id)}
+                    className="flex items-center gap-1.5 text-xs text-green-500 hover:text-green-600 font-medium transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Rate Plan
+                  </button>
+                </div>
               </div>
             </div>
           </div>
