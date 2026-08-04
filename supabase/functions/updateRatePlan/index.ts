@@ -5,10 +5,12 @@ const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -23,107 +25,225 @@ serve(async (req) => {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader || "" } } }
+      { global: { headers: { Authorization: authHeader || "" } } },
     );
+
+    // 0. Snapshot the current row so we can roll back Channex if Supabase fails
+    const { data: originalRow, error: fetchError } = await supabase
+      .from("rate_plans")
+      .select("*")
+      .eq("id", localId)
+      .single();
+
+    if (fetchError)
+      throw new Error(
+        `Failed to fetch current rate plan for rollback snapshot: ${fetchError.message}`,
+      );
+
+    // Build the rollback payload from the snapshot
+    const originalOptions = Array.isArray(originalRow.options)
+      ? originalRow.options
+      : [];
+    const rollbackPayload = {
+      rate_plan: {
+        title: originalRow.title,
+        tax_set_id: originalRow.tax_set_id ?? null,
+        parent_rate_plan_id: originalRow.parent_rate_plan_id ?? null,
+        children_fee: originalRow.children_fee ?? "0.00",
+        infant_fee: originalRow.infant_fee ?? "0.00",
+        max_stay: originalRow.max_stay ?? 0,
+        min_stay_arrival: originalRow.min_stay_arrival ?? 1,
+        min_stay_through: originalRow.min_stay_through ?? 1,
+        closed_to_arrival: originalRow.closed_to_arrival ?? false,
+        closed_to_departure: originalRow.closed_to_departure ?? false,
+        stop_sell: originalRow.stop_sell ?? false,
+        options: originalOptions,
+        currency: originalRow.currency ?? null,
+        sell_mode: originalRow.sell_mode ?? "per_room",
+        rate_mode: originalRow.rate_mode ?? "manual",
+        inherit_rate: originalRow.inherit_settings?.rate ?? false,
+        inherit_closed_to_arrival:
+          originalRow.inherit_settings?.closed_to_arrival ?? false,
+        inherit_closed_to_departure:
+          originalRow.inherit_settings?.closed_to_departure ?? false,
+        inherit_stop_sell: originalRow.inherit_settings?.stop_sell ?? false,
+        inherit_min_stay_arrival:
+          originalRow.inherit_settings?.min_stay_arrival ?? false,
+        inherit_min_stay_through:
+          originalRow.inherit_settings?.min_stay_through ?? false,
+        inherit_max_stay: originalRow.inherit_settings?.max_stay ?? false,
+        inherit_max_sell: originalRow.inherit_settings?.max_sell ?? false,
+        inherit_max_availability:
+          originalRow.inherit_settings?.max_availability ?? false,
+        inherit_availability_offset:
+          originalRow.inherit_settings?.availability_offset ?? false,
+        auto_rate_settings: originalRow.auto_rate_settings ?? null,
+      },
+    };
 
     // 1. Update in Channex
     const channexPayload = {
       rate_plan: {
         title: form.title,
-        currency: form.currency || "PHP",
-        sell_mode: form.sell_mode || "per_room",
-        rate_mode: form.rate_mode || "manual",
-        tax_set_id: form.tax_set_id || null,
-        parent_rate_plan_id: form.rate_mode === "derived" ? (form.parent_rate_plan_id || null) : null,
-        children_fee: form.children_fee || "0.00",
-        infant_fee: form.infant_fee || "0.00",
-        max_stay: Array(7).fill(Number(form.max_stay) ?? 0),
-        min_stay_arrival: Array(7).fill(Number(form.min_stay_arrival) ?? 1),
-        min_stay_through: Array(7).fill(Number(form.min_stay_through) ?? 1),
-        closed_to_arrival: Array(7).fill(Boolean(form.closed_to_arrival) ?? false),
-        closed_to_departure: Array(7).fill(Boolean(form.closed_to_departure) ?? false),
-        stop_sell: Array(7).fill(Boolean(form.stop_sell) ?? false),
-        inherit_rate: form.inherit_rate ?? false,
-        inherit_closed_to_arrival: form.inherit_closed_to_arrival ?? false,
-        inherit_closed_to_departure: form.inherit_closed_to_departure ?? false,
-        inherit_stop_sell: form.inherit_stop_sell ?? false,
-        inherit_min_stay_arrival: form.inherit_min_stay_arrival ?? false,
-        inherit_min_stay_through: form.inherit_min_stay_through ?? false,
-        inherit_max_stay: form.inherit_max_stay ?? false,
-        inherit_max_sell: form.inherit_max_sell ?? false,
-        inherit_max_availability: form.inherit_max_availability ?? false,
-        inherit_availability_offset: form.inherit_availability_offset ?? false,
+        tax_set_id: null,
+        parent_rate_plan_id: null,
+        children_fee: "0.00",
+        infant_fee: "0.00",
+        max_stay: 0,
+        min_stay_arrival: 1,
+        min_stay_through: 1,
+        closed_to_arrival: false,
+        closed_to_departure: false,
+        stop_sell: false,
+        options: [
+          {
+            occupancy: form.occupancy,
+            is_primary: form.primary,
+            rate: form.rate,
+          },
+        ],
+        currency: null,
+        sell_mode: "per_room",
+        rate_mode: "manual",
+        inherit_rate: false,
+        inherit_closed_to_arrival: false,
+        inherit_closed_to_departure: false,
+        inherit_stop_sell: false,
+        inherit_min_stay_arrival: false,
+        inherit_min_stay_through: false,
+        inherit_max_stay: false,
+        inherit_max_sell: false,
+        inherit_max_availability: false,
+        inherit_availability_offset: false,
         auto_rate_settings: null,
       },
     };
 
-    const channexRes = await fetch(`${CHANNEX_BASE_URL}/api/v1/rate_plans/${channexRatePlanId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "user-api-key": channexApiKey,
+    const channexRes = await fetch(
+      `${CHANNEX_BASE_URL}/api/v1/rate_plans/${channexRatePlanId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "user-api-key": channexApiKey,
+        },
+        body: JSON.stringify(channexPayload),
       },
-      body: JSON.stringify(channexPayload),
-    });
+    );
 
     if (!channexRes.ok) {
       let errorBody;
-      try { errorBody = await channexRes.json(); } catch { /* ignore */ }
+      try {
+        errorBody = await channexRes.json();
+      } catch {
+        /* ignore */
+      }
 
       if (channexRes.status === 422 && errorBody?.errors?.details) {
         const fieldMessages = Object.entries(errorBody.errors.details)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+          .map(
+            ([field, msgs]) =>
+              `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`,
+          )
           .join(" | ");
         throw new Error(`Channex validation error — ${fieldMessages}`);
       }
-      throw new Error(errorBody?.errors?.title || `Failed to update rate plan in Channex (${channexRes.status})`);
+      throw new Error(
+        errorBody?.errors?.title ||
+          `Failed to update rate plan in Channex (${channexRes.status})`,
+      );
     }
 
-    // 2. Update in Supabase
-    const { data: row, error: supabaseError } = await supabase
-      .from("rate_plans")
-      .update({
-        title: form.title,
-        currency: form.currency || "PHP",
-        sell_mode: form.sell_mode || "per_room",
-        rate_mode: form.rate_mode || "manual",
-        tax_set_id: form.tax_set_id || null,
-        parent_rate_plan_id: form.rate_mode === "derived" ? (form.parent_rate_plan_id || null) : null,
-        children_fee: form.children_fee || "0.00",
-        infant_fee: form.infant_fee || "0.00",
-        min_stay_arrival: Number(form.min_stay_arrival) ?? 1,
-        min_stay_through: Number(form.min_stay_through) ?? 1,
-        max_stay: Number(form.max_stay) ?? 0,
-        closed_to_arrival: Boolean(form.closed_to_arrival) ?? false,
-        closed_to_departure: Boolean(form.closed_to_departure) ?? false,
-        stop_sell: Boolean(form.stop_sell) ?? false,
-        inherit_settings: {
-          rate: form.inherit_rate ?? false,
-          closed_to_arrival: form.inherit_closed_to_arrival ?? false,
-          closed_to_departure: form.inherit_closed_to_departure ?? false,
-          stop_sell: form.inherit_stop_sell ?? false,
-          min_stay_arrival: form.inherit_min_stay_arrival ?? false,
-          min_stay_through: form.inherit_min_stay_through ?? false,
-          max_stay: form.inherit_max_stay ?? false,
-          max_sell: form.inherit_max_sell ?? false,
-          max_availability: form.inherit_max_availability ?? false,
-          availability_offset: form.inherit_availability_offset ?? false,
-        },
-      })
-      .eq("id", localId)
-      .select("*")
-      .single();
+    // 2. Update in Supabase — roll back Channex if this fails
+    try {
+      const { data: row, error: supabaseError } = await supabase
+        .from("rate_plans")
+        .update({
+          title: form.title,
+          tax_set_id: null,
+          parent_rate_plan_id: null,
+          children_fee: "0.00",
+          infant_fee: "0.00",
+          max_stay: 0,
+          min_stay_arrival: 1,
+          min_stay_through: 1,
+          closed_to_arrival: false,
+          closed_to_departure: false,
+          stop_sell: false,
+          options: [
+            {
+              occupancy: form.occupancy,
+              is_primary: form.primary,
+              rate: form.rate,
+            },
+          ],
+          currency: null,
+          sell_mode: "per_room",
+          rate_mode: "manual",
+          inherit_settings: {
+            rate: false,
+            closed_to_arrival: false,
+            closed_to_departure: false,
+            stop_sell: false,
+            min_stay_arrival: false,
+            min_stay_through: false,
+            max_stay: false,
+            max_sell: false,
+            max_availability: false,
+            availability_offset: false,
+          },
+          auto_rate_settings: null,
+        })
+        .eq("id", localId)
+        .select("*")
+        .single();
 
-    if (supabaseError) throw new Error(`Supabase update failed: ${supabaseError.message}`);
+      if (supabaseError)
+        throw new Error(`Supabase update failed: ${supabaseError.message}`);
 
-    return new Response(JSON.stringify({ row }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      return new Response(JSON.stringify({ row }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      // Rollback: re-PUT the original values to Channex so it stays in sync
+      console.warn(
+        `[updateRatePlan] Supabase update failed — rolling back Channex rate plan ${channexRatePlanId}...`,
+      );
+      try {
+        await fetch(
+          `${CHANNEX_BASE_URL}/api/v1/rate_plans/${channexRatePlanId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "user-api-key": channexApiKey,
+            },
+            body: JSON.stringify(rollbackPayload),
+          },
+        );
+        console.log(
+          `[updateRatePlan] Channex rollback succeeded for rate plan ${channexRatePlanId}`,
+        );
+      } catch (rollbackError) {
+        console.error(
+          `[updateRatePlan] Channex rollback failed for rate plan ${channexRatePlanId}:`,
+          rollbackError,
+        );
+      }
 
+      throw error; // Re-throw to be caught by outer handler
+    }
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[updateRatePlan] Error:", err.message);
+    return new Response(
+      JSON.stringify({
+        error:
+          "An error occurred while updating the rate plan. Please try again later.",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
