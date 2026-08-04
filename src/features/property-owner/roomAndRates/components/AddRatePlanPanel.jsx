@@ -33,12 +33,13 @@ export const AddRatePlanPanel = ({
   // Populate form when editing or reset when adding
   useEffect(() => {
     if (open && ratePlanToEdit) {
+      const opt = ratePlanToEdit.options?.[0] ?? {};
       setRoomTypeId(ratePlanToEdit.room_type_id || "");
       setForm({
         title: ratePlanToEdit.title || "",
-        occupancy: ratePlanToEdit.occupancy ?? 1,
-        primary: ratePlanToEdit.primary ?? false,
-        rate: ratePlanToEdit.rate ?? 0,
+        occupancy: opt.occupancy ?? 1,
+        primary: opt.is_primary ?? false,
+        rate: opt.rate ?? 0,
       });
     } else if (open && !ratePlanToEdit) {
       setRoomTypeId(defaultRoomTypeId || "");
