@@ -2,13 +2,13 @@ import { toast } from "sonner";
 
 export const handleDeleteRatePlan = async ({
   rp,
+  propertyId,
   deleteRatePlan,
   setSubmitting,
 }) => {
-  if (!window.confirm(`Are you sure you want to delete "${rp.title}"?`)) return;
   setSubmitting(true);
   try {
-    await deleteRatePlan(rp.id, rp.channex_rate_plan_id);
+    await deleteRatePlan({ localId: rp.id, channexRatePlanId: rp.channex_rate_plan_id, propertyId });
     toast.success("Rate plan deleted");
   } catch (err) {
     toast.error("Failed to delete rate plan", { description: err.message });

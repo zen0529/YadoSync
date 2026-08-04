@@ -5,8 +5,8 @@ export const handleDeleteRoomType = async ({
   deleteRoomType,
   setSubmitting,
 }) => {
-  if (!window.confirm(`Are you sure you want to delete ${rt.title}?`)) return;
   setSubmitting(true);
+
   try {
     await deleteRoomType(rt.id, rt.channex_room_type_id);
     toast.success("Room type deleted");

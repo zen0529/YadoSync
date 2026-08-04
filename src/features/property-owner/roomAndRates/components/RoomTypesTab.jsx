@@ -5,6 +5,7 @@ import { useCreateRatePlan } from "../hooks/useCreateRatePlan";
 import { useUpdateRatePlan } from "../hooks/useUpdateRatePlan";
 import { useDeleteRatePlan } from "../hooks/useDeleteRatePlan";
 import { Button } from "@/components/ui/button";
+import { DeleteDialog } from "@/components/ui/delete-dialog";
 import {
   Loader2,
   Plus,
@@ -59,6 +60,10 @@ export const RoomTypesTab = ({
   const [ratePlanToEdit, setRatePlanToEdit] = useState(null);
   const [rpSubmitting, setRpSubmitting] = useState(false);
   const [defaultRoomTypeId, setDefaultRoomTypeId] = useState(null);
+
+  /* ── Delete dialog state ─────────────────────────────────────────── */
+  const [deleteRtTarget, setDeleteRtTarget] = useState(null); // rt object to delete
+  const [deleteRpTarget, setDeleteRpTarget] = useState(null); // rp object to delete
 
   /* ── Lift loaded data to parent (InventoryPage holds it for ARIEditorPanel) ─ */
   useEffect(() => {
@@ -137,12 +142,14 @@ export const RoomTypesTab = ({
       handleClose: handleCloseRt,
     });
 
-  const handleDeleteRt = (rt) =>
+  const handleDeleteRt = (rt) => setDeleteRtTarget(rt);
+
+  const handleConfirmDeleteRt = () =>
     handleDeleteRoomType({
-      rt,
+      rt: deleteRtTarget,
       deleteRoomType,
       setSubmitting: setRtSubmitting,
-    });
+    }).finally(() => setDeleteRtTarget(null));
 
   /* ── Rate plan handlers ──────────────────────────────────────────────── */
   const handleAddRp = (roomTypeId) => {
@@ -182,12 +189,14 @@ export const RoomTypesTab = ({
       handleClose: handleCloseRp,
     });
 
-  const handleDeleteRp = (rp) =>
+  const handleDeleteRp = (rp) => setDeleteRpTarget(rp);
+
+  const handleConfirmDeleteRp = () =>
     handleDeleteRatePlan({
-      rp,
+      rp: deleteRpTarget,
       deleteRatePlan,
       setSubmitting: setRpSubmitting,
-    });
+    }).finally(() => setDeleteRpTarget(null));
 
   /* ── Loading ─────────────────────────────────────────────────────────── */
   if (rtLoading) {
@@ -481,6 +490,34 @@ export const RoomTypesTab = ({
         submitting={rpSubmitting}
         roomTypes={roomTypes}
         defaultRoomTypeId={defaultRoomTypeId}
+      />
+
+      {/* Delete room-type confirmation dialog */}
+      <DeleteDialog
+        open={!!deleteRtTarget}
+        onOpenChange={(open) => !open && setDeleteRtTarget(null)}
+        title="Delete Room Type"
+        description={
+          deleteRtTarget
+            ? `Are you sure you want to delete "${deleteRtTarget.title}"? This action cannot be undone.`
+            : undefined
+        }
+        loading={rtSubmitting}
+        onConfirm={handleConfirmDeleteRt}
+      />
+
+      {/* Delete rate-plan confirmation dialog */}
+      <DeleteDialog
+        open={!!deleteRpTarget}
+        onOpenChange={(open) => !open && setDeleteRpTarget(null)}
+        title="Delete Rate Plan"
+        description={
+          deleteRpTarget
+            ? `Are you sure you want to delete "${deleteRpTarget.title}"? This action cannot be undone.`
+            : undefined
+        }
+        loading={rpSubmitting}
+        onConfirm={handleConfirmDeleteRp}
       />
     </div>
   );
