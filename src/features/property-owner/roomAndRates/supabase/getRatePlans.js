@@ -18,6 +18,7 @@ export const getRatePlansByProperty = async (propertyId) => {
       )
     `)
     .eq("property_id", propertyId)
+    .eq("status", "active")
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(`Failed to fetch rate plans: ${error.message}`);

@@ -34,6 +34,7 @@ export const getRatePlansForOwner = async (userId) => {
       )
     `)
     .eq("property_id", propData.id)
+    .eq("status", "active")
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(`Failed to fetch rate plans: ${error.message}`);
