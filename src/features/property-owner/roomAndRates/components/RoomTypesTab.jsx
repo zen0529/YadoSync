@@ -194,6 +194,7 @@ export const RoomTypesTab = ({
   const handleConfirmDeleteRp = () =>
     handleDeleteRatePlan({
       rp: deleteRpTarget,
+      propertyId,
       deleteRatePlan,
       setSubmitting: setRpSubmitting,
     }).finally(() => setDeleteRpTarget(null));
