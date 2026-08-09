@@ -87,7 +87,7 @@ export default function App() {
             <Route path="bookings" element={<BookingsPage />} />
             <Route path="inbox" element={<InboxPage />} />
             <Route path="resorts" element={<ResortsPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="rooms-and-rates" element={<InventoryPage />} />
             <Route path="rates" element={<RatesPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="connections" element={<ConnectionsPage />} />
