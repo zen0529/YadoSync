@@ -44,12 +44,14 @@ import {
   BedDouble,
   MessageSquare,
   BarChart3,
+  Package,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "inbox", label: "Inbox", icon: MessageSquare },
   { id: "bookings", label: "Bookings", icon: CalendarCheck },
+  { id: "inventory", label: "Inventory", icon: Package },
   { id: "rooms-and-rates", label: "Rooms & Rates", icon: BedDouble },
   { id: "rates", label: "Rates & Yield", icon: TrendingUp },
   { id: "analytics", label: "Analytics & Reports", icon: BarChart3 },
@@ -235,6 +237,7 @@ const DashboardLayoutInner = () => {
   const isConnectionsPage = page === "connections";
   const isRatesPage = page === "rates";
   const isInventoryPage = page === "inventory";
+  const isRoomsAndRatesPage = page === "rooms-and-rates";
   const isInboxPage = page === "inbox";
   const isAnalyticsPage = page === "analytics";
   const isNoFiltersPage =
@@ -242,6 +245,7 @@ const DashboardLayoutInner = () => {
     isConnectionsPage ||
     isRatesPage ||
     isInventoryPage ||
+    isRoomsAndRatesPage ||
     isInboxPage ||
     isAnalyticsPage;
   const [connectionCount, setConnectionCount] = useState(0);
