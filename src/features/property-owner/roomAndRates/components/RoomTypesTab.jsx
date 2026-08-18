@@ -213,9 +213,9 @@ export const RoomTypesTab = ({
 
   /* ── Render ──────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-4 border border-black">
-      {/* Section header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Section header — fixed / sticky */}
+      <div className="sticky top-0 z-20 flex items-center justify-between py-2.5 bg-background/95 backdrop-blur-md">
         <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
           Property Room Types
         </p>

@@ -53,32 +53,32 @@ serve(async (req) => {
         room_type_id: channexRoomTypeId,
         title: form.title,
         tax_set_id: null,
-        parent_rate_plan_id: null,
+        parent_rate_plan_id: form.parentRatePlanId ?? null,
         children_fee: "0.00",
         infant_fee: "0.00",
-        max_stay: 0,
-        min_stay_arrival: 1,
-        min_stay_through: 1,
+        max_stay: form.restrictions?.max_stay ?? 0,
+        min_stay_arrival: form.restrictions?.min_stay_arrival ?? 1,
+        min_stay_through: form.restrictions?.min_stay_through ?? 1,
         closed_to_arrival: false,
         closed_to_departure: false,
         stop_sell: false,
         options: [
           {
             occupancy: form.occupancy,
-            is_primary: form.primary,
-            rate: form.rate,
+            is_primary: form.primary ?? true,
+            rate: Math.round(Number(form.rate)) * 100, // rate = 200, 20000 is pushed to channex
           },
         ],
         currency: null,
         sell_mode: "per_room",
-        rate_mode: "manual",
-        inherit_rate: false,
-        inherit_closed_to_arrival: false,
-        inherit_closed_to_departure: false,
-        inherit_stop_sell: false,
-        inherit_min_stay_arrival: false,
-        inherit_min_stay_through: false,
-        inherit_max_stay: false,
+        rate_mode: form.rateMode ?? "manual",
+        inherit_rate: form.inherit?.rate ?? false,
+        inherit_closed_to_arrival: form.inherit?.closed_to_arrival ?? false,
+        inherit_closed_to_departure: form.inherit?.closed_to_departure ?? false,
+        inherit_stop_sell: form.inherit?.stop_sell ?? false,
+        inherit_min_stay_arrival: form.inherit?.min_stay_arrival ?? false,
+        inherit_min_stay_through: form.inherit?.min_stay_through ?? false,
+        inherit_max_stay: form.inherit?.max_stay ?? false,
         inherit_max_sell: false,
         inherit_max_availability: false,
         inherit_availability_offset: false,
@@ -134,33 +134,33 @@ serve(async (req) => {
             channex_rate_plan_id: channexRatePlanId,
             title: form.title,
             tax_set_id: null,
-            parent_rate_plan_id: null,
+            parent_rate_plan_id: form.parentRatePlanId ?? null,
             children_fee: "0.00",
             infant_fee: "0.00",
-            max_stay: 0,
-            min_stay_arrival: 1,
-            min_stay_through: 1,
+            max_stay: form.restrictions?.max_stay ?? 0,
+            min_stay_arrival: form.restrictions?.min_stay_arrival ?? 1,
+            min_stay_through: form.restrictions?.min_stay_through ?? 1,
             closed_to_arrival: false,
             closed_to_departure: false,
             stop_sell: false,
             options: [
               {
                 occupancy: form.occupancy,
-                is_primary: form.primary,
+                is_primary: form.primary ?? true,
                 rate: form.rate,
               },
             ],
             currency: null,
             sell_mode: "per_room",
-            rate_mode: "manual",
+            rate_mode: form.rateMode ?? "manual",
             inherit_settings: {
-              rate: false,
-              closed_to_arrival: false,
-              closed_to_departure: false,
-              stop_sell: false,
-              min_stay_arrival: false,
-              min_stay_through: false,
-              max_stay: false,
+              rate: form.inherit?.rate ?? false,
+              closed_to_arrival: form.inherit?.closed_to_arrival ?? false,
+              closed_to_departure: form.inherit?.closed_to_departure ?? false,
+              stop_sell: form.inherit?.stop_sell ?? false,
+              min_stay_arrival: form.inherit?.min_stay_arrival ?? false,
+              min_stay_through: form.inherit?.min_stay_through ?? false,
+              max_stay: form.inherit?.max_stay ?? false,
               max_sell: false,
               max_availability: false,
               availability_offset: false,
@@ -185,14 +185,18 @@ serve(async (req) => {
         const entries = filterPastDates(
           dates.map((d) => ({
             date: d,
-            rate: 0,
-            min_stay_arrival: Number(form.min_stay_arrival) || 1,
-            stop_sell: Boolean(form.stop_sell) || false,
-            closed_to_arrival: Boolean(form.closed_to_arrival) || false,
-            closed_to_departure: Boolean(form.closed_to_departure) || false,
+            rate: Number(form.rate) || 0,
+            min_stay_arrival: form.restrictions?.min_stay_arrival ?? 1,
+            min_stay_through: form.restrictions?.min_stay_through ?? 1,
+            max_stay: form.restrictions?.max_stay ?? 0,
+            stop_sell: false,
+            closed_to_arrival: false,
+            closed_to_departure: false,
           })),
         );
+        console.log("entries", entries);
         const ranges = compressRestrictions(entries);
+        console.log("ranges", ranges);
 
         const channexRestValues = ranges.map((r) => {
           const v: Record<string, unknown> = {
@@ -200,22 +204,28 @@ serve(async (req) => {
             rate_plan_id: channexRatePlanId,
             date_from: r.date_from,
             date_to: r.date_to,
+            // Restriction defaults from form — owner overrides these later via ARI editor
+            min_stay_arrival: form.restrictions?.min_stay_arrival ?? 1,
+            min_stay_through: form.restrictions?.min_stay_through ?? 1,
+            max_stay: form.restrictions?.max_stay ?? 0,
+            closed_to_arrival: false,
+            closed_to_departure: false,
+            stop_sell: false,
           };
           if (sellMode === "per_person") {
-            v.rates = [{ occupancy: 1, rate: 0 }];
+            v.rates = [
+              {
+                occupancy: form.occupancy,
+                rate: Math.round(Number(form.rate) * 100),
+              },
+            ];
           } else {
-            v.rate = r.rate ?? 0;
+            v.rate = Math.round(Number(form.rate) * 100);
           }
-          if (r.min_stay_arrival !== undefined)
-            v.min_stay_arrival = r.min_stay_arrival;
-          if (r.stop_sell !== undefined) v.stop_sell = r.stop_sell;
-          if (r.closed_to_arrival !== undefined)
-            v.closed_to_arrival = r.closed_to_arrival;
-          if (r.closed_to_departure !== undefined)
-            v.closed_to_departure = r.closed_to_departure;
           return v;
         });
 
+        console.log("channex rest values", channexRestValues);
         await channexPost(
           "/restrictions",
           { values: channexRestValues },
@@ -234,6 +244,8 @@ serve(async (req) => {
           date: v.date,
           rate: v.rate,
           min_stay_arrival: v.min_stay_arrival,
+          min_stay_through: v.min_stay_through,
+          max_stay: v.max_stay,
           stop_sell: v.stop_sell,
           closed_to_arrival: v.closed_to_arrival,
           closed_to_departure: v.closed_to_departure,
