@@ -10,8 +10,8 @@ import { DashboardPage } from "@/features/property-owner/dashboard/ui/DashboardP
 import { BookingsPage } from "@/features/property-owner/bookings/ui/BookingsPage";
 import { ResortsPage } from "@/features/property-owner/resorts/ui/ResortsPage";
 import { AnalyticsPage } from "@/features/property-owner/analytics/ui/AnalyticsPage";
-import { RatesPage } from "@/features/property-owner/rates/ui/RatesPage";
-import { InventoryPage } from "@/features/property-owner/roomAndRates/pages/InventoryPage";
+import { RoomAndRatesPage } from "@/features/property-owner/roomAndRates/pages/roomAndRatesPage";
+import { InventoryPage as NewInventoryPage } from "@/features/property-owner/inventory";
 import { InboxPage } from "@/features/property-owner/inbox/ui/InboxPage";
 import ConnectionsPage from "@/features/property-owner/connections/ui/ConnectionsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
@@ -25,6 +25,8 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
+import { PropertyProvider } from "@/features/property-owner/context/PropertyContext";
 
 // Fix for default Leaflet marker icon in React
 let DefaultIcon = L.icon({
@@ -78,7 +80,9 @@ export default function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardLayout />
+                <PropertyProvider>
+                  <DashboardLayout />
+                </PropertyProvider>
               </ProtectedRoute>
             }
           >
@@ -87,8 +91,8 @@ export default function App() {
             <Route path="bookings" element={<BookingsPage />} />
             <Route path="inbox" element={<InboxPage />} />
             <Route path="resorts" element={<ResortsPage />} />
-            <Route path="rooms-and-rates" element={<InventoryPage />} />
-            <Route path="rates" element={<RatesPage />} />
+            <Route path="rooms-and-rates" element={<RoomAndRatesPage />} />
+            <Route path="inventory" element={<NewInventoryPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="connections" element={<ConnectionsPage />} />
             <Route path="settings" element={<SettingsPage />} />

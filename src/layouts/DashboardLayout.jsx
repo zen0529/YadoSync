@@ -22,6 +22,8 @@ import {
 import { RESORTS, TIMEFRAMES } from "@/data/constants";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { useActiveProperty } from "@/features/property-owner/context/PropertyContext";
+import { PropertySelector } from "@/features/property-owner/components/PropertySelector";
 import { supabase } from "@/lib/supabase";
 import yadoLogo from "@/assets/logoWhite.png";
 import {
@@ -40,7 +42,6 @@ import {
   PanelLeftOpen,
   Moon,
   Sun,
-  TrendingUp,
   BedDouble,
   MessageSquare,
   BarChart3,
@@ -53,7 +54,6 @@ const NAV_ITEMS = [
   { id: "bookings", label: "Bookings", icon: CalendarCheck },
   { id: "inventory", label: "Inventory", icon: Package },
   { id: "rooms-and-rates", label: "Rooms & Rates", icon: BedDouble },
-  { id: "rates", label: "Rates & Yield", icon: TrendingUp },
   { id: "analytics", label: "Analytics & Reports", icon: BarChart3 },
   { id: "connections", label: "Connections", icon: Globe },
 ];
@@ -235,7 +235,6 @@ const DashboardLayoutInner = () => {
   const page = location.pathname.split("/")[2] || "overview";
   const isSettingsPage = page === "settings";
   const isConnectionsPage = page === "connections";
-  const isRatesPage = page === "rates";
   const isInventoryPage = page === "inventory";
   const isRoomsAndRatesPage = page === "rooms-and-rates";
   const isInboxPage = page === "inbox";
@@ -243,28 +242,25 @@ const DashboardLayoutInner = () => {
   const isNoFiltersPage =
     isSettingsPage ||
     isConnectionsPage ||
-    isRatesPage ||
     isInventoryPage ||
     isRoomsAndRatesPage ||
     isInboxPage ||
     isAnalyticsPage;
+  const { selectedPropertyId } = useActiveProperty();
   const [connectionCount, setConnectionCount] = useState(0);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!selectedPropertyId) {
+      setConnectionCount(0);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
-        const { data: prop } = await supabase
-          .from("properties")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (!prop || cancelled) return;
         const { count } = await supabase
           .from("platform_connection")
           .select("id", { count: "exact", head: true })
-          .eq("property_id", prop.id)
+          .eq("property_id", selectedPropertyId)
           .eq("connection_status", "connected");
         if (!cancelled) setConnectionCount(count || 0);
       } catch {}
@@ -272,7 +268,7 @@ const DashboardLayoutInner = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, page]);
+  }, [selectedPropertyId, page]);
   const [timeframe, setTimeframe] = useState("All-time");
   const [showDateRange, setShowDateRange] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
@@ -345,7 +341,7 @@ const DashboardLayoutInner = () => {
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         {/* TOPBAR — frosted glass */}
         <header className="h-14 glass-topbar px-4 sm:px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Mobile hamburger */}
             <button
               onClick={() => setSidebarOpen(true)}
@@ -370,21 +366,35 @@ const DashboardLayoutInner = () => {
               {NAV_ITEMS.find((n) => n.id === page)?.label ||
                 (page === "settings" ? "Settings" : "")}
             </h3>
-          </div>
-          {!isNoFiltersPage && (
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs text-muted-foreground/70 hidden sm:inline">
-                {timeframe}
-              </span>
-              <Button
-                size="sm"
-                className="bg-green-500/90 hover:bg-green-600 text-white h-8 text-xs rounded-lg shadow-md shadow-green-500/20 backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30"
-              >
-                <Download className="w-3.5 h-3.5 mr-1.5" />{" "}
-                <span className="hidden sm:inline">Export</span>
-              </Button>
+
+            {/* Property Selector */}
+            <div className="hidden sm:block w-px h-4 bg-border/60 mx-0.5" />
+            <div className="hidden sm:block">
+              <PropertySelector />
             </div>
-          )}
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Mobile Property Selector */}
+            <div className="sm:hidden">
+              <PropertySelector />
+            </div>
+
+            {!isNoFiltersPage && (
+              <>
+                <span className="text-xs text-muted-foreground/70 hidden sm:inline">
+                  {timeframe}
+                </span>
+                <Button
+                  size="sm"
+                  className="bg-green-500/90 hover:bg-green-600 text-white h-8 text-xs rounded-lg shadow-md shadow-green-500/20 backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />{" "}
+                  <span className="hidden sm:inline">Export</span>
+                </Button>
+              </>
+            )}
+          </div>
         </header>
 
         {/* CONTENT */}
