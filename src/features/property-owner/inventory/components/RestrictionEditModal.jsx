@@ -1,8 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
-  SlidersHorizontal,
   Loader2,
-  Calendar,
   ArrowRight,
   ShieldAlert,
   DollarSign,
@@ -15,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -318,8 +315,6 @@ export const RestrictionEditModal = ({
   const currencySymbol = currency === "PHP" ? "₱" : "$";
   const resolvedRoomType =
     roomTypeName || ratePlan.room_types?.title || "Accommodation";
-  const sellModeLabel =
-    ratePlan.sell_mode === "per_person" ? "Per Person" : "Per Room";
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleStartDateChange = (val) => {
@@ -484,16 +479,6 @@ export const RestrictionEditModal = ({
                     (Operation Target)
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="secondary"
-                    className="text-[11px] font-semibold px-2 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"
-                  >
-                    {daysCount > 0
-                      ? `${daysCount} ${daysCount === 1 ? "day" : "days"} selected`
-                      : "Invalid Range"}
-                  </Badge>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
@@ -540,7 +525,7 @@ export const RestrictionEditModal = ({
             {/* ════════════════════════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* ── LEFT COLUMN: PRICING & STAY RULES ───────────────────────── */}
-              <div className="space-y-4 border border-black">
+              <div className="space-y-4 ">
                 <div className="flex items-center justify-between pb-1 border-b border-border/60">
                   <div className="flex items-center gap-1.5">
                     <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -734,7 +719,7 @@ export const RestrictionEditModal = ({
               </div>
 
               {/* ── RIGHT COLUMN: BOOKING CONTROLS ──────────────────────────── */}
-              <div className="space-y-4 flex flex-col justify-between border border-black">
+              <div className="space-y-4 flex flex-col justify-between ">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between pb-1 border-b border-border">
                     <div className="flex items-center gap-1.5">
@@ -948,12 +933,7 @@ export const RestrictionEditModal = ({
           {/* 4. FOOTER WITH EXPLICIT OTA PUSH CONFIRMATION                        */}
           {/* ════════════════════════════════════════════════════════════════════ */}
           <div className="px-6 py-3.5 bg-muted/40 border-t-muted border-border flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-              <span>
-                Changes push live immediately to all connected OTA channels.
-              </span>
-            </div>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground"></div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <Button
@@ -961,7 +941,7 @@ export const RestrictionEditModal = ({
                 variant="outline"
                 onClick={onClose}
                 disabled={loading}
-                className="h-8.5 px-4 text-xs font-medium border-border"
+                className="h-8.5 px-4 text-xs font-medium border-gray-400"
               >
                 Cancel
               </Button>
