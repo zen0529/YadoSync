@@ -4,7 +4,8 @@ import nodemailer from "npm:nodemailer";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -14,34 +15,53 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const channexBaseUrl = Deno.env.get("CHANNEX_BASE_URL") ?? "https://staging.channex.io";
+  const channexBaseUrl = Deno.env.get("CHANNEX_BASE_URL");
   const channexApiKey = Deno.env.get("CHANNEX_API_KEY") ?? "";
 
   if (!supabaseUrl || !supabaseServiceKey || !channexApiKey) {
-    return new Response(JSON.stringify({ error: "Missing environment variables" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({ error: "Missing environment variables" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-  
+
   try {
     const { email, password, fullName, resolvedForm } = await req.json();
 
     if (!email || !password || !resolvedForm) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // --- 1. Create Auth User ---
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName || "Property Owner",
-      }
-    });
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email: email,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName || "Property Owner",
+        },
+      });
 
     if (authError) {
-      return new Response(JSON.stringify({ error: `Auth Error: ${authError.message}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ error: `Auth Error: ${authError.message}` }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const newUserId = authData.user.id;
@@ -51,9 +71,10 @@ serve(async (req) => {
       id: newUserId,
       email: email,
       full_name: fullName || "Property Owner",
-      role: "owner"
+      role: "owner",
     });
-    if (upsertError) console.error("[DEBUG] Failed to upsert public user:", upsertError);
+    if (upsertError)
+      console.error("[DEBUG] Failed to upsert public user:", upsertError);
 
     // --- 2. Create Property in Channex ---
     const channexPayload = {
@@ -76,9 +97,12 @@ serve(async (req) => {
         website: resolvedForm.website || undefined,
         facilities: [],
         settings: {
-          allow_availability_autoupdate_on_confirmation: resolvedForm.settings.allow_availability_autoupdate_on_confirmation,
-          allow_availability_autoupdate_on_modification: resolvedForm.settings.allow_availability_autoupdate_on_modification,
-          allow_availability_autoupdate_on_cancellation: resolvedForm.settings.allow_availability_autoupdate_on_cancellation,
+          allow_availability_autoupdate_on_confirmation:
+            resolvedForm.settings.allow_availability_autoupdate_on_confirmation,
+          allow_availability_autoupdate_on_modification:
+            resolvedForm.settings.allow_availability_autoupdate_on_modification,
+          allow_availability_autoupdate_on_cancellation:
+            resolvedForm.settings.allow_availability_autoupdate_on_cancellation,
           min_stay_type: resolvedForm.settings.min_stay_type,
           min_price: resolvedForm.settings.min_price || null,
           max_price: resolvedForm.settings.max_price || null,
@@ -89,8 +113,12 @@ serve(async (req) => {
         },
         content: {
           description: resolvedForm.content.description || undefined,
-          important_information: resolvedForm.content.important_information || undefined,
-          photos: resolvedForm.content.photos.length > 0 ? resolvedForm.content.photos : undefined,
+          important_information:
+            resolvedForm.content.important_information || undefined,
+          photos:
+            resolvedForm.content.photos.length > 0
+              ? resolvedForm.content.photos
+              : undefined,
         },
       },
     };
@@ -109,9 +137,15 @@ serve(async (req) => {
       await supabaseAdmin.auth.admin.deleteUser(newUserId);
 
       let errorBody;
-      try { errorBody = await channexRes.json(); } catch { }
-      const errorMsg = errorBody?.errors?.title || `Channex API error (${channexRes.status})`;
-      return new Response(JSON.stringify({ error: errorMsg }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      try {
+        errorBody = await channexRes.json();
+      } catch {}
+      const errorMsg =
+        errorBody?.errors?.title || `Channex API error (${channexRes.status})`;
+      return new Response(JSON.stringify({ error: errorMsg }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const channexResult = await channexRes.json();
@@ -122,21 +156,24 @@ serve(async (req) => {
     try {
       const { data: property, error: propertyError } = await supabaseAdmin
         .from("properties")
-        .insert([{
-          user_id: newUserId,
-          channex_property_id: propertyData.id,
-          name: attrs.title,
-          status: attrs.is_active ? "active" : "inactive",
-          owner_email: attrs.email,
-          owner_phone: attrs.phone,
-          owner_name: resolvedForm.owner_name || attrs.owner_name || "",
-          currency: attrs.currency,
-          property_type: attrs.property_type,
-          commission_rate: resolvedForm.commission_rate || attrs.commission_rate || 15,
-          channex_settings: attrs.settings || {},
-          content_description: attrs.content?.description || null,
-          content_imp_info: attrs.content?.important_information || null,
-        }])
+        .insert([
+          {
+            user_id: newUserId,
+            channex_property_id: propertyData.id,
+            name: attrs.title,
+            status: attrs.is_active ? "active" : "inactive",
+            owner_email: attrs.email,
+            owner_phone: attrs.phone,
+            owner_name: resolvedForm.owner_name || attrs.owner_name || "",
+            currency: attrs.currency,
+            property_type: attrs.property_type,
+            commission_rate:
+              resolvedForm.commission_rate || attrs.commission_rate || 15,
+            channex_settings: attrs.settings || {},
+            content_description: attrs.content?.description || null,
+            content_imp_info: attrs.content?.important_information || null,
+          },
+        ])
         .select("id")
         .single();
 
@@ -147,16 +184,18 @@ serve(async (req) => {
       // Address
       const { error: addressError } = await supabaseAdmin
         .from("property_address")
-        .insert([{
-          property_id: localPropertyId,
-          address_line: attrs.address || null,
-          city: attrs.city || null,
-          state: attrs.state || null,
-          country: attrs.country || null,
-          postcode: attrs.zip_code || null,
-          latitude: attrs.latitude || null,
-          longitude: attrs.longitude || null
-        }]);
+        .insert([
+          {
+            property_id: localPropertyId,
+            address_line: attrs.address || null,
+            city: attrs.city || null,
+            state: attrs.state || null,
+            country: attrs.country || null,
+            postcode: attrs.zip_code || null,
+            latitude: attrs.latitude || null,
+            longitude: attrs.longitude || null,
+          },
+        ]);
       if (addressError) console.error("[DEBUG] Address Error:", addressError);
 
       // Photos
@@ -167,9 +206,11 @@ serve(async (req) => {
           channex_photo_id: photo.id,
           url: photo.url,
           position: photo.position || 0,
-          description: photo.description || null
+          description: photo.description || null,
         }));
-        const { error: photosError } = await supabaseAdmin.from("property_photos").insert(photosToInsert);
+        const { error: photosError } = await supabaseAdmin
+          .from("property_photos")
+          .insert(photosToInsert);
         if (photosError) console.error("[DEBUG] Photos Error:", photosError);
       }
 
@@ -178,12 +219,20 @@ serve(async (req) => {
       for (const group of groups) {
         const { data: savedGroup, error: groupError } = await supabaseAdmin
           .from("property_groups")
-          .upsert({ channex_group_id: group.id, title: group.attributes?.title || "Unknown Group" }, { onConflict: "channex_group_id" })
+          .upsert(
+            {
+              channex_group_id: group.id,
+              title: group.attributes?.title || "Unknown Group",
+            },
+            { onConflict: "channex_group_id" },
+          )
           .select("id")
           .single();
-        
+
         if (!groupError && savedGroup) {
-          await supabaseAdmin.from("property_group_assignments").insert({ property_id: localPropertyId, group_id: savedGroup.id });
+          await supabaseAdmin
+            .from("property_group_assignments")
+            .insert({ property_id: localPropertyId, group_id: savedGroup.id });
         }
       }
 
@@ -195,12 +244,16 @@ serve(async (req) => {
       if (smtpUser && smtpPass) {
         try {
           const transporter = nodemailer.createTransport({
-            host: smtpHost, port: smtpPort, secure: smtpPort === 465,
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
             auth: { user: smtpUser, pass: smtpPass },
           });
           await transporter.sendMail({
-            from: smtpUser, to: email, subject: "Your New Property Account",
-            text: `Hello ${fullName || 'Property Owner'},\n\nAn account has been created for your new property!\n\nYour temporary password is: ${password}\n\nPlease log in and change this as soon as possible.`,
+            from: smtpUser,
+            to: email,
+            subject: "Your New Property Account",
+            text: `Hello ${fullName || "Property Owner"},\n\nAn account has been created for your new property!\n\nYour temporary password is: ${password}\n\nPlease log in and change this as soon as possible.`,
           });
         } catch (smtpError) {
           console.error("[DEBUG] SMTP Error:", smtpError);
@@ -208,26 +261,34 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ property, user: authData.user }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-
     } catch (dbError: any) {
       // Rollback Database Failure
       console.error("[DEBUG] DB Error:", dbError);
-      
+
       // Delete Channex property
       await fetch(`${channexBaseUrl}/api/v1/properties/${propertyData.id}`, {
         method: "DELETE",
-        headers: { "user-api-key": channexApiKey }
+        headers: { "user-api-key": channexApiKey },
       });
-      
+
       // Delete user
       await supabaseAdmin.auth.admin.deleteUser(newUserId);
-      
-      return new Response(JSON.stringify({ error: `Database Error: ${dbError.message}` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
 
+      return new Response(
+        JSON.stringify({ error: `Database Error: ${dbError.message}` }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

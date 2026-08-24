@@ -77,13 +77,14 @@ src/features/
 
 ### 3. Feature Internal Structure (`src/features/[role]/[feature-name]/`)
 
-Every feature module strictly follows this 5-subfolder structure + `index.js` barrel file:
+Every feature module strictly follows this subfolder structure + `index.js` barrel file:
 
 ```
 [feature-name]/
 ├── components/      # UI sub-components strictly specific to this feature
-├── hooks/           # Custom React hooks (the mandatory bridge between UI and Queries)
-├── queries/         # TanStack Query hooks & Supabase data fetching / edge function callers
+├── hooks/           # Custom React hooks (the mandatory bridge between UI, TanStack Query, and Supabase)
+├── supabase/        # Pure Supabase database queries & edge function callers
+├── tanstack/        # TanStack Query keys, cache management, and query options
 ├── utils/           # Feature-specific helpers, calculations, formatters, and constants
 ├── page/            # Route Page component(s) (e.g., InventoryPage.jsx)
 └── index.js         # Public API entry point exporting the page and public interfaces
@@ -125,14 +126,15 @@ Edge Functions serve as the secure bridge between YadoManagement and the Channex
 
 ## Coding Conventions
 
-- **Feature Architecture**: Strictly adhere to the 5-subfolder + `index.js` feature structure defined in the Architecture section above.
+- **Feature Architecture**: Strictly adhere to the subfolder structure + `index.js` feature structure defined in the Architecture section above.
 - **Single Responsibility Principle (SRP)**:
   - **Components (`components/`, `page/`)**: Responsible _strictly for presentation and rendering_. Break complex forms/views into small, focused sub-components. Never put data-fetching logic or heavy data transformations inside UI components.
-  - **Hooks (`hooks/`)**: Each hook manages _one specific workflow or state machine_ (e.g., `useRatePlanForm`, `useInventoryCalendar`), acting as the dedicated bridge to queries and mutations.
-  - **Queries (`queries/`)**: Responsible _strictly for data access_ (calling Supabase tables or invoking edge functions). No UI state or form handling.
+  - **Hooks (`hooks/`)**: Each hook manages _one specific workflow or state machine_ (e.g., `useRatePlanForm`, `useInventoryCalendar`), acting as the dedicated bridge between UI, TanStack Query, and data access.
+  - **Supabase (`supabase/`)**: Responsible _strictly for database access_ (calling Supabase tables or invoking edge functions). Pure data access with no React state or UI handling.
+  - **TanStack (`tanstack/`)**: Responsible _strictly for query key factories, query options, and cache management helpers_ for TanStack Query.
   - **Utils (`utils/`)**: Pure, side-effect-free helper functions that do one thing (formatting, calculations, matrix transformations). No React dependencies or hooks.
   - **Edge Functions**: Each function handles _one discrete business operation_ (e.g., `createRatePlan`, `pushRestrictions`, `createProperty`).
-- **Hook Bridge Rule**: Custom React hooks in `hooks/` are the **mandatory bridge** between UI components (`page/`, `components/`) and the data layer (`queries/`). UI components must never query Supabase or external APIs directly.
+- **Hook Bridge Rule**: Custom React hooks in `hooks/` are the **mandatory bridge** between UI components (`page/`, `components/`) and the data/caching layer (`supabase/`, `tanstack/`). UI components must never query Supabase or external APIs directly.
 - **Import Rules & Boundaries**:
   - Global layers (`src/components/`, `src/layouts/`, `src/lib/`, `src/utils/`, `src/hooks/`) can never import from `src/features/`.
   - Feature components must never directly import internal/private files of another feature. If cross-feature access is necessary, import via the feature's `index.js` barrel or elevate the shared logic to global (`src/components/`) or role-shared (`src/features/[role]/components/`).

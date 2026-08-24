@@ -1,13 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,9 +9,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { RESORTS, TIMEFRAMES } from "@/data/constants";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { useActiveProperty } from "@/features/property-owner/context/PropertyContext";
@@ -30,12 +27,9 @@ import {
   LayoutGrid,
   CalendarCheck,
   Building2,
-  Coins,
   Globe,
   Settings,
   LogOut,
-  Download,
-  CalendarDays,
   Menu,
   X,
   PanelLeftClose,
@@ -46,6 +40,7 @@ import {
   MessageSquare,
   BarChart3,
   Package,
+  ChevronDown,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -62,12 +57,8 @@ const SidebarContent = ({
   collapsed,
   page,
   closeSidebar,
-  username,
-  signOut,
   connectionCount,
 }) => {
-  const { dark, toggle } = useTheme();
-
   return (
     <>
       {/* BRAND */}
@@ -111,7 +102,7 @@ const SidebarContent = ({
 
       {/* NAV */}
       <nav
-        className={`pt-5 flex-1 ${collapsed ? "px-2" : "px-3"}`}
+        className={`pt-5 pb-4 flex-1 overflow-y-auto ${collapsed ? "px-2" : "px-3"}`}
         aria-label="Main navigation"
       >
         {!collapsed && (
@@ -145,107 +136,22 @@ const SidebarContent = ({
             </Link>
           );
         })}
-
-        {!collapsed && (
-          <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-2 mb-2 mt-5">
-            Support
-          </p>
-        )}
-        <Link
-          to="/dashboard/settings"
-          onClick={closeSidebar}
-          title={collapsed ? "Settings" : undefined}
-          className={`w-full flex items-center ${collapsed ? "justify-center mt-4" : "gap-2.5"} px-3 py-2.5 rounded-xl text-sm transition-all duration-200
-            ${
-              page === "settings"
-                ? "bg-white/20 text-white font-semibold shadow-sm"
-                : "text-white/60 hover:bg-white/10 hover:text-white"
-            }`}
-        >
-          <Settings className="w-4 h-4 shrink-0" />
-          {!collapsed && " Settings"}
-        </Link>
       </nav>
-
-      {/* DARK MODE TOGGLE */}
-      <div
-        className={`border-t border-white/15 ${collapsed ? "px-2 py-3" : "px-4 py-3"}`}
-      >
-        <button
-          onClick={toggle}
-          title={dark ? "Switch to light mode" : "Switch to dark mode"}
-          aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-          className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5"} px-3 py-2.5 rounded-xl text-sm transition-all duration-200
-            text-white/60 hover:bg-white/10 hover:text-white`}
-        >
-          {dark ? (
-            <Sun className="w-4 h-4 shrink-0" />
-          ) : (
-            <Moon className="w-4 h-4 shrink-0" />
-          )}
-          {!collapsed && (dark ? "Light Mode" : "Dark Mode")}
-        </button>
-      </div>
-
-      {/* USER / SIGN OUT */}
-      <div
-        className={`border-t border-white/15 flex items-center ${collapsed ? "justify-center px-2 py-4" : "gap-2.5 px-4 py-4"}`}
-      >
-        <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-md shadow-black/10">
-          {username.charAt(0).toUpperCase()}
-        </div>
-        {!collapsed && (
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/90 truncate">
-              {username}
-            </p>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <button className="text-[10px] text-white/50 hover:text-red-300 transition-colors flex items-center gap-1">
-                  <LogOut className="w-2.5 h-2.5" /> Sign out
-                </button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Sign out</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to sign out of YadoManagement?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction variant="destructive" onClick={signOut}>
-                    Sign out
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
-      </div>
     </>
   );
 };
 
 const DashboardLayoutInner = () => {
   const { user, signOut } = useAuth();
+  const { dark, toggle } = useTheme();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const username =
-    user?.user_metadata?.username || user?.email?.split("@")[0] || "User";
+    user?.user_metadata?.username ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "User";
   const location = useLocation();
   const page = location.pathname.split("/")[2] || "overview";
-  const isSettingsPage = page === "settings";
-  const isConnectionsPage = page === "connections";
-  const isInventoryPage = page === "inventory";
-  const isRoomsAndRatesPage = page === "rooms-and-rates";
-  const isInboxPage = page === "inbox";
-  const isAnalyticsPage = page === "analytics";
-  const isNoFiltersPage =
-    isSettingsPage ||
-    isConnectionsPage ||
-    isInventoryPage ||
-    isRoomsAndRatesPage ||
-    isInboxPage ||
-    isAnalyticsPage;
   const { selectedPropertyId } = useActiveProperty();
   const [connectionCount, setConnectionCount] = useState(0);
 
@@ -269,10 +175,7 @@ const DashboardLayoutInner = () => {
       cancelled = true;
     };
   }, [selectedPropertyId, page]);
-  const [timeframe, setTimeframe] = useState("All-time");
-  const [showDateRange, setShowDateRange] = useState(false);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem("yadomanagement-sidebar") === "collapsed";
@@ -331,8 +234,6 @@ const DashboardLayoutInner = () => {
           collapsed={collapsed}
           page={page}
           closeSidebar={closeSidebar}
-          username={username}
-          signOut={signOut}
           connectionCount={connectionCount}
         />
       </aside>
@@ -366,155 +267,105 @@ const DashboardLayoutInner = () => {
               {NAV_ITEMS.find((n) => n.id === page)?.label ||
                 (page === "settings" ? "Settings" : "")}
             </h3>
-
-            {/* Property Selector */}
-            <div className="hidden sm:block w-px h-4 bg-border/60 mx-0.5" />
-            <div className="hidden sm:block">
-              <PropertySelector />
-            </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            {/* Mobile Property Selector */}
-            <div className="sm:hidden">
-              <PropertySelector />
-            </div>
+          {/* Right Topbar actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Property Selector */}
+            <PropertySelector />
 
-            {!isNoFiltersPage && (
-              <>
-                <span className="text-xs text-muted-foreground/70 hidden sm:inline">
-                  {timeframe}
-                </span>
-                <Button
-                  size="sm"
-                  className="bg-green-500/90 hover:bg-green-600 text-white h-8 text-xs rounded-lg shadow-md shadow-green-500/20 backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30"
+            {/* Dark Mode Toggle (Circular icon button only) */}
+            <button
+              type="button"
+              onClick={toggle}
+              title={dark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+              className="w-9 h-9 rounded-full border border-gray-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center justify-center text-gray-700 dark:text-zinc-300 shadow-xs transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            >
+              {dark ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-gray-700 dark:text-zinc-300" />
+              )}
+            </button>
+
+            {/* User Profile Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 py-1 px-1 sm:pr-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/20 group"
+                  aria-label="User account menu"
                 >
-                  <Download className="w-3.5 h-3.5 mr-1.5" />{" "}
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
-              </>
-            )}
+                  <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 flex items-center justify-center text-xs font-semibold overflow-hidden border border-violet-200 dark:border-violet-800/40 shrink-0 shadow-xs">
+                    {username.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-zinc-200 max-w-[90px] sm:max-w-[140px] truncate hidden sm:inline-block">
+                    {username}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-400 group-hover:text-gray-600 dark:group-hover:text-zinc-200 transition-colors" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl shadow-xl">
+                <div className="flex items-center gap-2.5 px-2.5 py-2">
+                  <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 flex items-center justify-center text-xs font-bold shrink-0">
+                    {username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate leading-tight">
+                      {username}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">
+                      {user?.email}
+                    </p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/dashboard/settings"
+                    className="flex items-center gap-2 px-2.5 py-2 cursor-pointer rounded-lg text-xs font-medium text-foreground hover:bg-muted/60"
+                  >
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem
+                  onClick={() => setShowSignOutDialog(true)}
+                  className="flex items-center gap-2 px-2.5 py-2 cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40 rounded-lg text-xs font-medium"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
+
+        {/* SIGN OUT CONFIRMATION DIALOG */}
+        <AlertDialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sign out</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to sign out of YadoManagement?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={signOut}>
+                Sign out
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* CONTENT */}
         <main
           className="flex-1 overflow-y-auto p-4 sm:p-6"
           aria-label="Page content"
         >
-          {/* FILTERS — frosted glass pill bar */}
-          {!isNoFiltersPage && (
-            <div className="flex items-center gap-2 mb-6 flex-wrap">
-              <div
-                className="flex glass-filter-bar rounded-xl overflow-hidden overflow-x-auto"
-                role="group"
-                aria-label="Timeframe filter"
-              >
-                {TIMEFRAMES.map((t, i) => (
-                  <div key={t} className="flex items-center">
-                    {i > 0 && (
-                      <div
-                        className="w-px bg-white/30 dark:bg-white/10 my-1.5"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <button
-                      onClick={() => {
-                        setTimeframe(t);
-                        setShowDateRange(false);
-                      }}
-                      aria-pressed={timeframe === t}
-                      className={`px-3 sm:px-4 py-2 text-xs font-medium transition-all duration-200 whitespace-nowrap
-                        ${
-                          timeframe === t
-                            ? "bg-green-500/90 text-white font-semibold shadow-sm"
-                            : "text-muted-foreground/80 hover:text-green-600 dark:hover:text-green-400 hover:bg-white/30 dark:hover:bg-white/10"
-                        }`}
-                    >
-                      {t}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={() => {
-                  setShowDateRange((v) => !v);
-                  if (!showDateRange) setTimeframe("Custom range");
-                }}
-                className="glass-filter-btn h-9 px-3.5 rounded-xl text-xs font-medium text-muted-foreground/80 hover:text-green-600 dark:hover:text-green-400 hover:bg-white/40 dark:hover:bg-white/10 transition-all duration-200 flex items-center gap-1.5"
-              >
-                <CalendarDays className="w-3.5 h-3.5" />{" "}
-                <span className="hidden sm:inline">Date Range</span>
-              </button>
-
-              {showDateRange && (
-                <div className="flex items-center gap-2 glass-filter-btn rounded-xl px-3 py-1.5">
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    aria-label="Start date"
-                    className="bg-transparent border-none text-xs text-foreground/80 outline-none w-28 cursor-pointer"
-                  />
-                  <span
-                    className="text-muted-foreground/60 text-xs"
-                    aria-hidden="true"
-                  >
-                    to
-                  </span>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    aria-label="End date"
-                    className="bg-transparent border-none text-xs text-foreground/80 outline-none w-28 cursor-pointer"
-                  />
-                </div>
-              )}
-
-              <Select>
-                <SelectTrigger className="h-9 text-xs w-36 glass-filter-btn rounded-xl border-0">
-                  <SelectValue placeholder="Platform: All" />
-                </SelectTrigger>
-                <SelectContent className="glass-dropdown rounded-xl border-white/30">
-                  <SelectItem value="all" className="text-xs rounded-lg">
-                    Platform: All
-                  </SelectItem>
-                  <SelectItem value="klook" className="text-xs rounded-lg">
-                    Klook
-                  </SelectItem>
-                  <SelectItem value="booking" className="text-xs rounded-lg">
-                    Booking.com
-                  </SelectItem>
-                  <SelectItem value="agoda" className="text-xs rounded-lg">
-                    Agoda
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select>
-                <SelectTrigger className="h-9 text-xs w-40 glass-filter-btn rounded-xl border-0">
-                  <SelectValue placeholder="Resort: All" />
-                </SelectTrigger>
-                <SelectContent className="glass-dropdown rounded-xl border-white/30">
-                  <SelectItem value="all" className="text-xs rounded-lg">
-                    Resort: All
-                  </SelectItem>
-                  {RESORTS.map((r) => (
-                    <SelectItem
-                      key={r.name}
-                      value={r.name}
-                      className="text-xs rounded-lg"
-                    >
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           {/* PAGES */}
           <Outlet />
         </main>

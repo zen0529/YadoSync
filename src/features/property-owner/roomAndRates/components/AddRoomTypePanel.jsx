@@ -172,7 +172,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                     </p>
                   </div>
                   <div className="grid grid-cols-[2fr_1fr] gap-3">
-                    <Field label="Title (e.g. Deluxe Double Room)">
+                    <Field label={<>Title (e.g. Deluxe Double Room) <span className="text-red-500">*</span></>}>
                       <input
                         className={inputCls}
                         value={form.title}
@@ -208,7 +208,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                   </Field>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Number of Rooms">
+                    <Field label={<>Number of Rooms <span className="text-red-500">*</span></>}>
                       <input
                         className={inputCls}
                         type="number"
@@ -217,7 +217,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                         onChange={e => setForm(f => ({ ...f, count_of_rooms: e.target.value }))}
                       />
                     </Field>
-                    <Field label="Total Capacity">
+                    <Field label={<>Total Capacity <span className="text-red-500">*</span></>}>
                       <input
                         className={inputCls}
                         type="number"
@@ -230,7 +230,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
 
                   <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mt-4 border-t border-black/5 dark:border-white/10 pt-4">Occupancy Limits</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Max Adults">
+                    <Field label={<>Max Adults <span className="text-red-500">*</span></>}>
                       <input
                         className={inputCls}
                         type="number"
@@ -239,7 +239,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                         onChange={e => setForm(f => ({ ...f, occ_adults: e.target.value }))}
                       />
                     </Field>
-                    <Field label="Default Occupancy">
+                    <Field label={<>Default Occupancy <span className="text-red-500">*</span></>}>
                       <input
                         className={inputCls}
                         type="number"
@@ -248,7 +248,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                         onChange={e => setForm(f => ({ ...f, default_occupancy: e.target.value }))}
                       />
                     </Field>
-                    <Field label="Max Children">
+                    <Field label={<>Max Children <span className="text-red-500">*</span></>}>
                       <input
                         className={inputCls}
                         type="number"
@@ -257,7 +257,7 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                         onChange={e => setForm(f => ({ ...f, occ_children: e.target.value }))}
                       />
                     </Field>
-                    <Field label="Max Infants">
+                    <Field label={<>Max Infants <span className="text-red-500">*</span></>}>
                       <input
                         className={inputCls}
                         type="number"

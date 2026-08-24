@@ -159,10 +159,12 @@ serve(async (req) => {
           available: v.available,
           updated_at: new Date().toISOString(),
         }));
+
         const supabaseAdmin = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
         );
+
         await supabaseAdmin
           .from("availability")
           .upsert(availUpsertRows, { onConflict: "room_type_id,date" });

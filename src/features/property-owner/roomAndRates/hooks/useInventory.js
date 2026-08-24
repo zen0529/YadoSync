@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
-
 /**
  * Hook to fetch a property owner's inventory (room types) from Supabase.
  */
@@ -16,7 +15,7 @@ export const useInventory = () => {
 
   const loadInventory = useCallback(async () => {
     if (!userId) return;
-    
+
     setLoading(true);
     try {
       // 1. Get the owner's property
@@ -25,25 +24,27 @@ export const useInventory = () => {
         .select("id, name, channex_property_id")
         .eq("user_id", userId)
         .single();
-        
-      if (propError && propError.code !== 'PGRST116') { // Ignore "no rows returned" error
+
+      if (propError) {
         throw new Error(`Failed to fetch property: ${propError.message}`);
       }
 
       if (propData) {
         setProperty(propData);
-        
+
         // 2. Get room types for this property
         const { data: roomsData, error: roomsError } = await supabase
           .from("room_types")
           .select("*")
           .eq("property_id", propData.id)
           .order("created_at", { ascending: true });
-          
+
+        console.log("room data", roomsData);
+
         if (roomsError) {
           throw new Error(`Failed to fetch room types: ${roomsError.message}`);
         }
-        
+
         setRoomTypes(roomsData || []);
       }
     } catch (err) {
@@ -62,6 +63,6 @@ export const useInventory = () => {
     property,
     roomTypes,
     loading,
-    refetch: loadInventory
+    refetch: loadInventory,
   };
 };

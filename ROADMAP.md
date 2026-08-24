@@ -2,16 +2,19 @@
 
 ## Where You Are Now ✅
 
-| Done | Feature |
-|---|---|
-| ✅ | Superadmin: Create / Update / View All Properties (Channex + Supabase dual-write) |
-| ✅ | Property owner account auto-created on property creation |
-| ✅ | Property owner can log in |
-| ✅ | Connections page (OTA platform connect/disconnect UI — shell only) |
-| ✅ | Inventory page shell (UI exists, wired to real Supabase data) |
-| ✅ | Channex as backbone (property API fully done, photos, address, groups) |
-| ✅ | **Phase 1: Room Types** — full CRUD via Channex + Supabase, property owner can create/edit/delete |
-| ✅ | **Phase 2: Rate Plans** — full CRUD via Channex + Supabase, nested under room types in the Owner Dashboard |
+| Done | Feature                                                                                                    |
+| ---- | ---------------------------------------------------------------------------------------------------------- |
+| ✅   | Superadmin: Create / Update / View All Properties (Channex + Supabase dual-write)                          |
+| ✅   | Property owner account auto-created on property creation                                                   |
+| ✅   | Property owner can log in                                                                                  |
+| ✅   | Connections page (OTA platform connect/disconnect UI — shell only)                                         |
+| ✅   | Inventory page shell (UI exists, wired to real Supabase data)                                              |
+| ✅   | Channex as backbone (property API fully done, photos, address, groups)                                     |
+| ✅   | **Phase 1: Room Types** — full CRUD via Channex + Supabase, property owner can create/edit/delete          |
+| ✅   | **Phase 2: Rate Plans** — full CRUD via Channex + Supabase, nested under room types in the Owner Dashboard |
+| ✅   | **Phase 3: ARI Push** — availability + rates editor UI, delta push to Channex, hourly pg_cron drift-correction |
+| ✅   | **Phase 4: Inbound Bookings** — feed poller + webhook, bookings page wired to real data                    |
+| ✅   | **Phase 5: OTA Channel Connections** — 3-step wizard (test → map → activate), deactivate-before-delete disconnect |
 
 > **Note (fixed):** `useCreateRatePlan` was invoking `"create-rate-plan"` (hyphenated) instead of `"createRatePlan"` — corrected to match the actual edge function folder name.
 
@@ -23,18 +26,13 @@
 Property → Room Types → Rate Plans → ARI (Availability + Rates) → OTA Channels → Bookings
 ```
 
-Each layer is required before the next is meaningful. Phases 1 & 2 completed the first three levels. The property is fully configured in Channex but **not yet bookable** — no availability or prices have been pushed.
+Each layer is required before the next is meaningful. Phases 1, 2 & 3 completed the first four levels. The property is fully configured in Channex, availability and rates are being pushed, and the hourly cron keeps Channex in sync. **OTA bookings cannot yet flow back into YadoSync.**
 
 ---
 
-## 📍 Where We Are: **Phase 3 (ARI Push)**
+## 📍 Where We Are: **Phase 6 (Dashboard & Analytics)**
 
-Room types and rate plans exist in Channex but:
-- Every room shows **0 availability** (Channex default on creation)
-- No rate is set on any date — guests see nothing bookable on any OTA
-- The Inventory page has no real calendar/pricing editor yet
-
-Phase 3 makes the property actually visible and bookable on OTAs.
+All core OTA sync functionality is now complete. Properties can connect Booking.com (and other OTAs as they are onboarded) through a guided 3-step wizard, availability and rates push out automatically, and inbound bookings flow back in. Phase 6 turns the accumulated bookings data into actionable insights on the Dashboard.
 
 ---
 
@@ -56,25 +54,26 @@ Rate plans are nested under room types in the Inventory page. Property owner can
 
 ---
 
-### 📍 Phase 3 — ARI Push (Availability + Rates) — CURRENT FOCUS
+### ✅ Phase 3 — ARI Push (Availability + Rates) — COMPLETED
 
 > **Goal: Make the property bookable on OTAs.**
 
 Without an ARI push, everything built in Phases 1 & 2 is invisible to OTAs. Channex sets room type availability to 0 on creation and sets no prices on rate plans.
 
 **Two Channex endpoints, always sent as separate messages:**
+
 - `POST /availability` — per room type, sets how many rooms are available per date
 - `POST /restrictions` — per rate plan, sets rate + min_stay + stop_sell etc.
 
 **Rules (from the `channex-pms-integration` skill):**
 
-| Rule | Detail |
-|---|---|
-| **Compress ranges** | Run-length encode consecutive equal values into `date_from`/`date_to` entries |
+| Rule                           | Detail                                                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Compress ranges**            | Run-length encode consecutive equal values into `date_from`/`date_to` entries                                                           |
 | **Push deltas, not the world** | On creation: push initial values. On edit: push only what changed and only changed fields (Channex applies partial restriction updates) |
-| **Debounce** | Coalesce rapid edits into one push via a job queue |
-| **Never send past dates** | Filter `date >= today` before every push |
-| **Verify with a readback** | `GET /availability` and `GET /restrictions?...&filter[restrictions]=rate` — do not trust the 200 alone |
+| **Debounce**                   | Coalesce rapid edits into one push via a job queue                                                                                      |
+| **Never send past dates**      | Filter `date >= today` before every push                                                                                                |
+| **Verify with a readback**     | `GET /availability` and `GET /restrictions?...&filter[restrictions]=rate` — do not trust the 200 alone                                  |
 
 **What to build:**
 
@@ -118,7 +117,7 @@ CREATE TABLE restrictions (
 
 ---
 
-### Phase 4 — Inbound Bookings (OTA → YadoSync)
+### ✅ Phase 4 — Inbound Bookings (OTA → YadoSync) — COMPLETED
 
 > **Goal: OTA bookings automatically appear in YadoSync.**
 
@@ -128,6 +127,7 @@ Channex delivers OTA bookings as **revisions** with a 30-minute expiry window. T
 - **Webhook endpoint**: `POST /webhooks` to register a callback → on event, pull revision by id → apply → ack
 
 **Key rules:**
+
 - Ack **only after** successfully writing the booking to Supabase — if writing fails, leave un-acked so it retries
 - Drain the feed until empty on each poll (don't stop at page 1 if `meta.total > meta.limit`)
 - Dedupe by `channex_booking_id` (look up in mapping before inserting)
@@ -136,6 +136,7 @@ Channex delivers OTA bookings as **revisions** with a 30-minute expiry window. T
 - Recovery after outage: one-shot `GET /bookings?filter[inserted_at][gte]=<outage_start>` — not a periodic sweep
 
 **What to build:**
+
 1. `bookings` Supabase table (with `channex_booking_id`, `ota_name`, `ota_reservation_code`, status, guest info, dates, amount)
 2. `pollBookingFeed` Supabase edge function (scheduled every minute)
 3. `channex-webhook` Supabase edge function (HTTP endpoint, registered with Channex)
@@ -144,30 +145,34 @@ Channex delivers OTA bookings as **revisions** with a 30-minute expiry window. T
 
 ---
 
-### Phase 5 — OTA Channel Connections (Make Connections page functional)
+### ✅ Phase 5 — OTA Channel Connections (Make Connections page functional) — COMPLETED
 
 > **Goal: Property owner connects their Booking.com / Airbnb / etc. account through Channex.**
 
-The Connections page UI exists but is a stub. This phase wires it to the Channex Channel API (requires **Channel API access** on the Channex account).
+The Connections page now runs a 3-step wizard backed by the Channex Channel API:
 
-**Flow:**
-1. `POST /channels/test_connection` — test OTA credentials (hotel_id)
-2. `POST /channels/mapping_details` — read OTA's rooms and rate codes
-3. Map OTA room+rate codes to YadoSync rate plans
-4. `POST /channels` — create the channel with the mapping
-5. `POST /channels/:id/activate` — go live
+1. `POST /channels/test_connection` — verify hotel_id credentials
+2. `POST /channels/mapping_details` — fetch OTA room+rate codes (integers)
+3. Map OTA rooms/rates → local rate plans in a visual table
+4. `POST /channels` → `POST /channels/:id/activate` — create + go live
+5. Disconnect: `POST /channels/:id/deactivate` then `DELETE /channels/:id`
 
-**Critical traps (from skill):**
-- Room/rate codes from OTAs come back as **integers** — send them as integers, not strings
-- `group_id` is required — fetch `GET /groups` and use the group that owns the property
-- Channels are created **inactive** — must explicitly activate
-- Delete requires deactivation first
+**Key traps handled:**
+- Room/rate codes are cast to integers server-side before sending to Channex
+- `group_id` resolved automatically via `GET /groups`
+- Deactivate-before-delete enforced in `disconnectChannel` edge function
+- Supabase write failure after channel create triggers channel rollback (deactivate + delete)
+
+**New edge functions:** `testChannelConnection`, `getChannelMappingDetails`, `createChannel`, `disconnectChannel`
+
+**Migration:** `20260725_platform_connection_channex.sql` — adds `channex_channel_id`, `channex_group_id`, `ota_hotel_id`, `mapping_payload` columns
 
 ---
 
 ### Phase 6 — Dashboard & Analytics
 
 With real bookings data, the Dashboard and Analytics pages become meaningful:
+
 - Revenue metrics (total, by OTA, by room type)
 - Occupancy rate per date range
 - Commission tracking
@@ -177,48 +182,49 @@ With real bookings data, the Dashboard and Analytics pages become meaningful:
 
 ## Summary Table
 
-| Phase | Feature | Who | Unblocks | Status |
-|---|---|---|---|---|
-| **1** | Room Types | Superadmin + Property Owner | Rate Plans | ✅ Done |
-| **2** | Rate Plans | Superadmin + Property Owner | ARI Push | ✅ Done |
-| **3** | ARI Push (Availability + Rates) | Property Owner manages dates/prices | Bookings can flow | 📍 **Current** |
-| **4** | Inbound Bookings (feed + webhook) | Automated + Owner views | Revenue data | ⏳ Pending |
-| **5** | OTA Channel Connections | Property Owner maps OTA rooms | OTA sync live | ⏳ Pending |
-| **6** | Dashboard + Analytics | Owner views | Business insights | ⏳ Pending |
+| Phase | Feature                           | Who                                 | Unblocks          | Status         |
+| ----- | --------------------------------- | ----------------------------------- | ----------------- | -------------- |
+| **1** | Room Types                        | Superadmin + Property Owner         | Rate Plans        | ✅ Done        |
+| **2** | Rate Plans                        | Superadmin + Property Owner         | ARI Push          | ✅ Done        |
+| **3** | ARI Push (Availability + Rates)   | Property Owner manages dates/prices | Bookings can flow | ✅ Done        |
+| **4** | Inbound Bookings (feed + webhook) | Automated + Owner views             | Revenue data      | ✅ Done        |
+| **5** | OTA Channel Connections           | Property Owner maps OTA rooms       | OTA sync live     | ✅ Done        |
+| **6** | Dashboard + Analytics             | Owner views                         | Business insights | 📍 **Current** |
 
 ---
 
 ## Supabase Edge Functions (current)
 
-| Function | Purpose |
-|---|---|
-| `createProperty` | Auth user + Channex property + Supabase row + email |
-| `updateProperty` | Channex PUT + Supabase update + photo sync |
-| `delete-property` | Channex DELETE + Supabase delete |
-| `createRoomType` | Channex POST + Supabase insert + rollback |
-| `updateRoomType` | Channex PUT + Supabase update |
-| `deleteRoomType` | Channex DELETE + Supabase delete |
-| `createRatePlan` | Channex POST + Supabase insert + rollback |
-| `updateRatePlan` | Channex PUT + Supabase update |
-| `deleteRatePlan` | Channex DELETE + Supabase delete |
-
-**To add in Phase 3:**
-- `pushAvailability` — POST to Channex `/availability` with range compression
-- `pushRestrictions` — POST to Channex `/restrictions` with delta + range compression
-
-**To add in Phase 4:**
-- `pollBookingFeed` — scheduled, polls feed, applies revisions, acks
-- `channex-webhook` — HTTP endpoint, receives Channex booking events
+| Function                    | Purpose                                             |
+| --------------------------- | --------------------------------------------------- |
+| `createProperty`            | Auth user + Channex property + Supabase row + email |
+| `updateProperty`            | Channex PUT + Supabase update + photo sync          |
+| `delete-property`           | Channex DELETE + Supabase delete                    |
+| `createRoomType`            | Channex POST + Supabase insert + rollback           |
+| `updateRoomType`            | Channex PUT + Supabase update                       |
+| `deleteRoomType`            | Channex DELETE + Supabase delete                    |
+| `createRatePlan`            | Channex POST + Supabase insert + rollback           |
+| `updateRatePlan`            | Channex PUT + Supabase update                       |
+| `deleteRatePlan`            | Channex DELETE + Supabase delete                    |
+| `pushAvailability`          | POST to Channex `/availability` with range compression + Supabase upsert |
+| `pushRestrictions`          | POST to Channex `/restrictions` with delta + range compression + Supabase upsert |
+| `fullSyncARI`               | Full-property drift-correction push (triggered by pg_cron hourly + "Sync All" button) |
+| `pollBookingFeed`           | Scheduled; polls feed, applies revisions, acks      |
+| `channex-webhook`           | HTTP endpoint; receives Channex booking events      |
+| `testChannelConnection`     | Step 1 — verify OTA hotel_id credentials            |
+| `getChannelMappingDetails`  | Step 2 — fetch OTA room/rate codes + resolve group_id |
+| `createChannel`             | Step 3 — create + activate channel, dual-write Supabase, rollback on failure |
+| `disconnectChannel`         | Deactivate + delete Channex channel, clear Supabase row |
 
 ---
 
 ## Environment Variables Required
 
-| Variable | Where set | Notes |
-|---|---|---|
-| `CHANNEX_BASE_URL` | Supabase secrets | `https://staging.channex.io` (staging) or `https://app.channex.io` (prod) |
-| `CHANNEX_API_KEY` | Supabase secrets | Never in source control |
-| `SUPABASE_URL` | Auto-injected | — |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase secrets | Used by admin-level edge functions |
-| `SUPABASE_ANON_KEY` | Auto-injected | Used by user-scoped edge functions |
-| `SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD` | Supabase secrets | For owner welcome email |
+| Variable                                                | Where set        | Notes                                                                     |
+| ------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------- |
+| `CHANNEX_BASE_URL`                                      | Supabase secrets | `https://staging.channex.io` (staging) or `https://app.channex.io` (prod) |
+| `CHANNEX_API_KEY`                                       | Supabase secrets | Never in source control                                                   |
+| `SUPABASE_URL`                                          | Auto-injected    | —                                                                         |
+| `SUPABASE_SERVICE_ROLE_KEY`                             | Supabase secrets | Used by admin-level edge functions                                        |
+| `SUPABASE_ANON_KEY`                                     | Auto-injected    | Used by user-scoped edge functions                                        |
+| `SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD` | Supabase secrets | For owner welcome email                                                   |

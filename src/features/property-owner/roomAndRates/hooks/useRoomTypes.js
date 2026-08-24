@@ -15,9 +15,10 @@ import { useDeleteRoomType } from "./useDeleteRoomType";
  *
  * @param {string|null} propertyId          - Local Supabase property UUID
  * @param {string|null} channexPropertyId   - Channex property UUID
+ * @param {Array}       initialRoomTypes     - Pre-fetched room types (skips first load when provided)
  */
-export const useRoomTypes = (propertyId, channexPropertyId) => {
-  const [roomTypes, setRoomTypes] = useState([]);
+export const useRoomTypes = (propertyId, channexPropertyId, initialRoomTypes) => {
+  const [roomTypes, setRoomTypes] = useState(initialRoomTypes ?? []);
   const [loading, setLoading] = useState(false);
 
   const { createRoomType: createViaEdge } = useCreateRoomType();
@@ -39,8 +40,10 @@ export const useRoomTypes = (propertyId, channexPropertyId) => {
   }, [propertyId]);
 
   useEffect(() => {
+    // Skip the initial fetch if the parent already supplied room types.
+    if (initialRoomTypes && initialRoomTypes.length > 0) return;
     load();
-  }, [load]);
+  }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Create ────────────────────────────────────────────────────────────── */
   const createRoomType = async (form) => {

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyProperty, getConnections } from "../queries";
+import { getRatePlansByProperty } from "@/features/property-owner/roomAndRates/supabase/getRatePlans";
 
-/** Fetch the current user's property */
+/** Fetch the current user's property (id + channex_property_id) */
 export const useMyProperty = (userId) => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,4 +42,20 @@ export const useConnections = (propertyId) => {
   }, [refetch]);
 
   return { connections, loading, refetch };
+};
+
+export const useRatePlansForMapping = (propertyId) => {
+  const [ratePlans, setRatePlans] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!propertyId) return;
+    setLoading(true);
+    getRatePlansByProperty(propertyId)
+      .then(setRatePlans)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [propertyId]);
+
+  return { ratePlans, loading };
 };

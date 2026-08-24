@@ -1,29 +1,34 @@
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+const deleteRatePlanFunction = async ({ localId, channexRatePlanId }) => {
+  const { data, error: functionError } = await supabase.functions.invoke("deleteRatePlan", {
+    body: { localId, channexRatePlanId },
+  });
+
+  if (functionError) throw new Error(`Function Error: ${functionError.message}`);
+  if (data?.error) throw new Error(data.error);
+
+  return true;
+};
+
 export const useDeleteRatePlan = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
 
-  const deleteRatePlan = async (localId, channexRatePlanId) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: functionError } = await supabase.functions.invoke("deleteRatePlan", {
-        body: { localId, channexRatePlanId },
+  const {
+    mutateAsync: deleteRatePlan,
+    isPending: loading,
+    error,
+  } = useMutation({
+    mutationFn: deleteRatePlanFunction,
+    onSuccess: (_, variables) => {
+      // Invalidate the rate plans list — triggers an automatic re-fetch
+      // so the deleted rate plan is removed from the UI immediately.
+      queryClient.invalidateQueries({
+        queryKey: ["ratePlans", variables.propertyId],
       });
-
-      if (functionError) throw new Error(`Function Error: ${functionError.message}`);
-      if (data?.error) throw new Error(data.error);
-
-      return true;
-    } catch (err) {
-      setError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
   return { deleteRatePlan, loading, error };
 };
