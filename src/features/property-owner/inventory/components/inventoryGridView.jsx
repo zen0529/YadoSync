@@ -377,10 +377,6 @@ export const InventoryGridView = ({
           >
             Today
           </button>
-
-          {gridLoading && (
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500 ml-1" />
-          )}
         </div>
 
         {/* Restrictions dropdown — right */}

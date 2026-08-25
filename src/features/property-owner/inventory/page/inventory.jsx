@@ -370,6 +370,13 @@ export const InventoryPage = () => {
     setViewMonth((m) => (m === 0 ? 11 : m - 1));
   };
   const handleNextMonth = () => {
+    const maxDate = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 12, 1),
+    );
+    const maxYear = maxDate.getUTCFullYear();
+    const maxMonth = maxDate.getUTCMonth();
+    if (viewYear > maxYear || (viewYear === maxYear && viewMonth >= maxMonth))
+      return;
     setViewYear((y) => (viewMonth === 11 ? y + 1 : y));
     setViewMonth((m) => (m === 11 ? 0 : m + 1));
   };
