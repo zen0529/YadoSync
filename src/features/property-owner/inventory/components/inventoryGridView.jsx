@@ -326,7 +326,7 @@ export const InventoryGridView = ({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-[14px] font-semibold text-gray-800 hover:text-violet-600 transition-colors px-2 min-w-[180px] text-center"
+                className="text-[14px] font-semibold text-gray-800 hover:text-green-600 transition-colors px-2 min-w-[180px] text-center"
               >
                 {dateRangeLabel}
               </button>
@@ -340,7 +340,7 @@ export const InventoryGridView = ({
                     key={opt.value}
                     onClick={() => onMonthChange?.(opt.year, opt.month)}
                     className={`text-xs cursor-pointer ${
-                      isSelected ? "font-bold text-violet-600" : ""
+                      isSelected ? "font-bold text-green-600" : ""
                     }`}
                   >
                     {opt.label}
@@ -379,7 +379,7 @@ export const InventoryGridView = ({
           </button>
 
           {gridLoading && (
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500 ml-1" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-green-500 ml-1" />
           )}
         </div>
 
@@ -466,12 +466,29 @@ export const InventoryGridView = ({
         {gridLoading && (
           <div className="sticky inset-0 z-40 w-full h-full pointer-events-none">
             <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-xl">
-              <div className="flex items-center gap-2 text-violet-600">
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              <div className="flex items-center gap-2 text-green-500">
+                <svg
+                  className="w-5 h-5 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8H4z"
+                  />
                 </svg>
-                <span className="text-sm font-semibold">Loading inventory…</span>
+                <span className="text-sm font-semibold">
+                  Loading inventory…
+                </span>
               </div>
             </div>
           </div>
@@ -503,7 +520,7 @@ export const InventoryGridView = ({
                     key={ds}
                     className={`text-center border-r border-gray-200 py-2.5 px-2 ${
                       isToday
-                        ? "bg-violet-600"
+                        ? "bg-purple-600"
                         : isWeekend
                           ? "bg-gray-100"
                           : hdrBg

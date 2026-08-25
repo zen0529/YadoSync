@@ -366,22 +366,12 @@ export const InventoryPage = () => {
   }, [selectedPropertyId]);
 
   const handlePrevMonth = () => {
-    setViewMonth((m) => {
-      if (m === 0) {
-        setViewYear((y) => y - 1);
-        return 11;
-      }
-      return m - 1;
-    });
+    setViewYear((y) => (viewMonth === 0 ? y - 1 : y));
+    setViewMonth((m) => (m === 0 ? 11 : m - 1));
   };
   const handleNextMonth = () => {
-    setViewMonth((m) => {
-      if (m === 11) {
-        setViewYear((y) => y + 1);
-        return 0;
-      }
-      return m + 1;
-    });
+    setViewYear((y) => (viewMonth === 11 ? y + 1 : y));
+    setViewMonth((m) => (m === 11 ? 0 : m + 1));
   };
   const handleThisMonth = () => {
     setViewYear(today.getUTCFullYear());
