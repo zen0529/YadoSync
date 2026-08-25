@@ -189,19 +189,7 @@ const PageHeader = ({
   onViewChange,
 }) => (
   <div className="flex items-center justify-between shrink-0">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-600 flex items-center justify-center shadow-md shadow-teal-500/20">
-        <CalendarDays className="w-5 h-5 text-white" />
-      </div>
-      <div>
-        <h2 className="text-lg font-bold text-foreground/90 leading-tight">
-          Inventory
-        </h2>
-        <p className="text-xs text-muted-foreground/60">
-          {property?.name ?? "Property"} · availability per room type
-        </p>
-      </div>
-    </div>
+    <div className="flex items-center gap-3"></div>
     <div className="flex items-center gap-2">
       {/* Toggle button: Grid & Calendar */}
       <div className="flex items-center p-1 bg-muted/50 dark:bg-muted/30 rounded-xl border border-border/40 gap-1">
@@ -342,25 +330,31 @@ export const InventoryPage = () => {
     (async () => {
       setRoomLoading(true);
       try {
-        const { data: rooms } = await supabase
-          .from("room_types")
-          .select("id, title, count_of_rooms, channex_room_type_id")
-          .eq("property_id", selectedPropertyId)
-          .order("created_at", { ascending: true });
-        if (!cancelled && rooms) {
-          setRoomTypes(rooms);
-          if (rooms.length) setActiveRoomTypeId(rooms[0].id);
-        }
+        // Fetch in parallel so both state updates fire in the same React render
+        const [{ data: rooms }, { data: plans }] = await Promise.all([
+          supabase
+            .from("room_types")
+            .select("id, title, count_of_rooms, channex_room_type_id")
+            .eq("property_id", selectedPropertyId)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("rate_plans")
+            .select(
+              "id, title, room_type_id, channex_rate_plan_id, currency, sell_mode, room_types(title)",
+            )
+            .eq("property_id", selectedPropertyId)
+            .order("created_at", { ascending: true }),
+        ]);
 
-        const { data: plans } = await supabase
-          .from("rate_plans")
-          .select(
-            "id, title, room_type_id, channex_rate_plan_id, currency, sell_mode, room_types(title)",
-          )
-          .eq("property_id", selectedPropertyId)
-          .order("created_at", { ascending: true });
-        if (!cancelled && plans) {
-          setRatePlans(plans);
+        if (!cancelled) {
+          if (rooms) {
+            setRoomTypes(rooms);
+            if (rooms.length) setActiveRoomTypeId(rooms[0].id);
+          }
+          // Both setRoomTypes + setRatePlans are called synchronously here,
+          // so React 18 batches them into ONE re-render — rate plan rows and
+          // availability rows always appear on the same paint.
+          if (plans) setRatePlans(plans);
         }
       } finally {
         if (!cancelled) setRoomLoading(false);

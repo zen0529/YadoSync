@@ -167,7 +167,8 @@ export const InventoryGridView = ({
 
   // ── Filter state ─────────────────────────────────────────────────────────
   const [showRatePlans, setShowRatePlans] = useState(true);
-  const [visibleRows, setVisibleRows] = useState(new Set(ALL_ROW_KEYS));
+  // Default: "Rate and Availability" preset
+  const [visibleRows, setVisibleRows] = useState(new Set(["rate"]));
   // Set of rate-plan IDs whose restriction rows are collapsed (rate row stays)
   const [collapsedRatePlans, setCollapsedRatePlans] = useState(new Set());
 
@@ -457,8 +458,24 @@ export const InventoryGridView = ({
       {/* ════════════════════════════════════════════════════════════════════ */}
       <div
         ref={gridContainerRef}
-        className="flex-1 min-h-0 overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm"
+        className="flex-1 min-h-0 overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm relative"
       >
+        {/* Loading overlay — blocks the grid until BOTH queries have settled.
+            Uses sticky+translate so it covers the visible viewport inside the
+            overflow-auto scroll container, regardless of scroll position. */}
+        {gridLoading && (
+          <div className="sticky inset-0 z-40 w-full h-full pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-xl">
+              <div className="flex items-center gap-2 text-violet-600">
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                <span className="text-sm font-semibold">Loading inventory…</span>
+              </div>
+            </div>
+          </div>
+        )}
         <table className="border-collapse text-left">
           {/* ── Sticky Date Header ── */}
           <thead>
