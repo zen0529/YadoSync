@@ -1,30 +1,25 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useActiveProperty } from "@/features/property-owner/context/PropertyContext";
-import { supabase } from "@/lib/supabase";
+import { getRoomTypesAndRatePlans } from "../supabase";
 import { toast } from "sonner";
 import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   Loader2,
-  RefreshCw,
-  BedDouble,
   Building2,
-  CalendarDays,
-  LayoutGrid,
   Pencil,
-  Check,
-  X,
   PackageOpen,
   AlertCircle,
 } from "lucide-react";
 import { InventoryGridView } from "../components/inventoryGridView";
 import { InventoryCalendarView } from "../components/inventoryCalendarView";
+import { AvailabilityEditModal } from "../components/AvailabilityEditModal";
+import { InventoryPageHeader } from "../components/InventoryPageHeader";
 import { useGetAvailabilities } from "../hooks/useGetAvailabilities";
 import { useGetRestrictions } from "../hooks/useGetRestrictions";
 import { Button } from "@/components/ui/button";
-import { usePushAvailability } from "@/features/property-owner/roomAndRates/hooks/usePushAvailability";
 import {
   MONTH_NAMES,
   DOW_LABELS,
@@ -33,208 +28,6 @@ import {
   daysInMonth,
   addDays,
 } from "../utils/dateUtils";
-
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
-
-const EditModal = ({
-  open,
-  onClose,
-  roomType,
-  date,
-  currentValue,
-  channexPropertyId,
-  propertyId,
-  onSaved,
-}) => {
-  const [val, setVal] = useState(currentValue ?? roomType?.count_of_rooms ?? 1);
-  const [saving, setSaving] = useState(false);
-  const { pushAvailability } = usePushAvailability();
-
-  useEffect(() => {
-    setVal(currentValue ?? roomType?.count_of_rooms ?? 1);
-  }, [currentValue, roomType, open]);
-
-  if (!open || !roomType || !date) return null;
-
-  const d = new Date(date + "T00:00:00Z");
-  const label = `${DOW_LABELS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()]}`;
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (!roomType.channex_room_type_id) {
-      toast.error(
-        "Room type has no Channex ID — sync it in Rooms & Rates first.",
-      );
-      return;
-    }
-    setSaving(true);
-    try {
-      await pushAvailability({
-        propertyId,
-        roomTypeId: roomType.id,
-        channexPropertyId,
-        channexRoomTypeId: roomType.channex_room_type_id,
-        values: [{ date, available: Number(val) }],
-      });
-      toast.success("Availability updated", {
-        description: `${val} rooms on ${date}`,
-      });
-      onSaved(roomType.id, date, Number(val));
-      onClose();
-    } catch (err) {
-      toast.error("Failed to push availability", { description: err.message });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 rounded-2xl bg-background/90 dark:bg-[#0f172a]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-2xl p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-md shadow-green-500/30">
-              <BedDouble className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground/90 leading-none">
-                {roomType.title}
-              </p>
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                {label}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground/70 mb-1.5 uppercase tracking-wide">
-              Available Rooms
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setVal((v) => Math.max(0, Number(v) - 1))}
-                className="w-9 h-9 rounded-xl bg-muted/50 hover:bg-muted text-foreground/70 flex items-center justify-center text-lg font-bold transition-colors"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min="0"
-                max={roomType.count_of_rooms}
-                value={val}
-                onChange={(e) => setVal(e.target.value)}
-                className="flex-1 h-9 rounded-xl border border-border bg-background/60 text-center text-base font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-green-400/50"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  setVal((v) =>
-                    Math.min(roomType.count_of_rooms, Number(v) + 1),
-                  )
-                }
-                className="w-9 h-9 rounded-xl bg-muted/50 hover:bg-muted text-foreground/70 flex items-center justify-center text-lg font-bold transition-colors"
-              >
-                +
-              </button>
-            </div>
-            <p className="text-[11px] text-muted-foreground/50 text-center mt-1.5">
-              Max capacity: <strong>{roomType.count_of_rooms}</strong>
-            </p>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={saving}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl shadow-md shadow-green-500/25"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Pushing to Channex…
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Save & Push
-              </>
-            )}
-          </Button>
-        </form>
-      </div>
-    </>
-  );
-};
-
-// ─── Page Header ──────────────────────────────────────────────────────────────
-
-const PageHeader = ({
-  property,
-  onRefresh,
-  gridLoading,
-  view = "grid",
-  onViewChange,
-}) => (
-  <div className="flex items-center justify-between shrink-0">
-    <div className="flex items-center gap-3"></div>
-    <div className="flex items-center gap-2">
-      {/* Toggle button: Grid & Calendar */}
-      <div className="flex items-center p-1 bg-muted/50 dark:bg-muted/30 rounded-xl border border-border/40 gap-1">
-        <button
-          type="button"
-          onClick={() => onViewChange?.("grid")}
-          className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-            view === "grid"
-              ? "bg-background text-foreground shadow-sm dark:bg-white/10 font-bold"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <LayoutGrid className="w-3.5 h-3.5" />
-          Grid
-        </button>
-        <button
-          type="button"
-          onClick={() => onViewChange?.("calendar")}
-          className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-            view === "calendar"
-              ? "bg-background text-foreground shadow-sm dark:bg-white/10 font-bold"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <CalendarDays className="w-3.5 h-3.5" />
-          Calendar
-        </button>
-      </div>
-
-      {onRefresh && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={gridLoading}
-          className="h-8 px-3 text-xs rounded-xl border-border/50 gap-1.5"
-        >
-          <RefreshCw
-            className={`w-3.5 h-3.5 ${gridLoading ? "animate-spin" : ""}`}
-          />
-        </Button>
-      )}
-    </div>
-  </div>
-);
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -331,20 +124,8 @@ export const InventoryPage = () => {
       setRoomLoading(true);
       try {
         // Fetch in parallel so both state updates fire in the same React render
-        const [{ data: rooms }, { data: plans }] = await Promise.all([
-          supabase
-            .from("room_types")
-            .select("id, title, count_of_rooms, channex_room_type_id")
-            .eq("property_id", selectedPropertyId)
-            .order("created_at", { ascending: true }),
-          supabase
-            .from("rate_plans")
-            .select(
-              "id, title, room_type_id, channex_rate_plan_id, currency, sell_mode, room_types(title)",
-            )
-            .eq("property_id", selectedPropertyId)
-            .order("created_at", { ascending: true }),
-        ]);
+        const { rooms, plans } =
+          await getRoomTypesAndRatePlans(selectedPropertyId);
 
         if (!cancelled) {
           if (rooms) {
@@ -425,7 +206,11 @@ export const InventoryPage = () => {
   if (!roomTypes.length) {
     return (
       <div className="flex flex-col gap-5">
-        <PageHeader property={property} view={view} onViewChange={setView} />
+        <InventoryPageHeader
+          property={property}
+          view={view}
+          onViewChange={setView}
+        />
         <div className="flex flex-col items-center justify-center h-64 gap-4">
           <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center">
             <PackageOpen className="w-8 h-8 text-muted-foreground/40" />
@@ -446,7 +231,7 @@ export const InventoryPage = () => {
     <div className="flex flex-col h-full gap-5">
       {/* Page header — fixed */}
       <div className="shrink-0">
-        <PageHeader
+        <InventoryPageHeader
           property={property}
           onRefresh={handleRefresh}
           gridLoading={isRefreshing}
@@ -513,7 +298,7 @@ export const InventoryPage = () => {
       )}
 
       {/* Edit modal */}
-      <EditModal
+      <AvailabilityEditModal
         open={!!editCell}
         onClose={() => setEditCell(null)}
         roomType={roomTypes.find((r) => r.id === editCell?.roomTypeId)}
