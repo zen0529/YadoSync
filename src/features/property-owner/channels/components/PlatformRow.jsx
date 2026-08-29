@@ -13,12 +13,10 @@ import {
 import { Link2 } from "lucide-react";
 import { disconnectChannelConnection } from "../queries";
 import { timeAgo } from "./timeAgo";
-import ConnectWizard from "./ConnectWizard";
 
 // ── Platform Row ──────────────────────────────────────────────────────────────
-const PlatformRow = ({ platform, connection, property, ratePlans, onNotify, onRefresh }) => {
+const PlatformRow = ({ platform, connection, property, onNotify, onRefresh, onConnect }) => {
   const isConnected = connection?.connection_status === "connected";
-  const [showWizard, setShowWizard]   = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -34,12 +32,6 @@ const PlatformRow = ({ platform, connection, property, ratePlans, onNotify, onRe
     } finally {
       setDisconnecting(false);
     }
-  };
-
-  const handleWizardSuccess = () => {
-    setShowWizard(false);
-    onNotify("success", `${platform.name} connected and activated`);
-    onRefresh();
   };
 
   return (
@@ -101,7 +93,7 @@ const PlatformRow = ({ platform, connection, property, ratePlans, onNotify, onRe
           ) : platform.supported ? (
             <Button
               size="sm"
-              onClick={() => setShowWizard(true)}
+              onClick={() => onConnect(platform)}
               className="text-xs h-8 shrink-0 bg-green-500/90 hover:bg-green-600 text-white shadow-sm shadow-green-500/20"
             >
               <Link2 className="w-3 h-3 mr-1" /> Connect
@@ -118,17 +110,6 @@ const PlatformRow = ({ platform, connection, property, ratePlans, onNotify, onRe
           )}
         </div>
       </div>
-
-      {/* Connect wizard */}
-      {showWizard && (
-        <ConnectWizard
-          platform={platform}
-          property={property}
-          ratePlans={ratePlans}
-          onSuccess={handleWizardSuccess}
-          onClose={() => setShowWizard(false)}
-        />
-      )}
 
       {/* Disconnect confirmation */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
@@ -157,3 +138,4 @@ const PlatformRow = ({ platform, connection, property, ratePlans, onNotify, onRe
 };
 
 export default PlatformRow;
+

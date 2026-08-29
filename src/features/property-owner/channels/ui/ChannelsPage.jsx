@@ -7,6 +7,7 @@ import {
 } from "../hooks/useConnections";
 import { PLATFORMS } from "../constants/PLATFORMS";
 import PlatformRow from "../components/PlatformRow";
+import { ChannelPanel } from "../components/ChannelPanel";
 
 export default function ChannelsPage() {
   const { user } = useAuth();
@@ -18,6 +19,8 @@ export default function ChannelsPage() {
   } = useConnections(property?.id);
 
   const [notification, setNotification] = useState(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState(null);
 
   const loading = propLoading || connLoading;
   const connectedCount = connections.filter(
@@ -31,6 +34,21 @@ export default function ChannelsPage() {
 
   const getConnection = (platformId) =>
     connections.find((c) => c.platform === platformId) || null;
+
+  const handleConnect = (platform) => {
+    setSelectedPlatform(platform);
+    setPanelOpen(true);
+  };
+
+  const handlePanelSuccess = () => {
+    setPanelOpen(false);
+    notify("success", `${selectedPlatform?.name} connected and activated`);
+    refetch();
+  };
+
+  const handlePanelClose = () => {
+    setPanelOpen(false);
+  };
 
   return (
     <>
@@ -106,11 +124,22 @@ export default function ChannelsPage() {
                 property={property}
                 onNotify={notify}
                 onRefresh={refetch}
+                onConnect={handleConnect}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Channel panel — rendered at page level, outside the platform list */}
+      <ChannelPanel
+        open={panelOpen}
+        platform={selectedPlatform}
+        property={property}
+        onSuccess={handlePanelSuccess}
+        onClose={handlePanelClose}
+      />
     </>
   );
 }
+
