@@ -4,12 +4,11 @@ import { AlertCircle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import {
   useMyProperty,
   useConnections,
-  useRatePlansForMapping,
 } from "../hooks/useConnections";
 import { PLATFORMS } from "../constants/PLATFORMS";
 import PlatformRow from "../components/PlatformRow";
 
-export default function ConnectionsPage() {
+export default function ChannelsPage() {
   const { user } = useAuth();
   const { property, loading: propLoading } = useMyProperty(user?.id);
   const {
@@ -17,9 +16,7 @@ export default function ConnectionsPage() {
     loading: connLoading,
     refetch,
   } = useConnections(property?.id);
-  const { ratePlans, loading: rpLoading } = useRatePlansForMapping(
-    property?.id,
-  );
+
   const [notification, setNotification] = useState(null);
 
   const loading = propLoading || connLoading;
@@ -99,16 +96,6 @@ export default function ConnectionsPage() {
             No property found. Please add a property in Settings before managing
             connections.
           </div>
-        ) : ratePlans.length === 0 && !rpLoading ? (
-          <div className="flex items-start gap-2 px-5 py-10 text-sm text-muted-foreground/60">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              You need at least one rate plan before connecting OTA channels.{" "}
-              <a href="/inventory" className="text-green-500 hover:underline">
-                Set up your inventory first.
-              </a>
-            </span>
-          </div>
         ) : (
           <div className="p-4 flex flex-col gap-1.5">
             {PLATFORMS.map((p) => (
@@ -117,7 +104,6 @@ export default function ConnectionsPage() {
                 platform={p}
                 connection={getConnection(p.id)}
                 property={property}
-                ratePlans={ratePlans}
                 onNotify={notify}
                 onRefresh={refetch}
               />

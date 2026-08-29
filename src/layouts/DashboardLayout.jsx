@@ -50,7 +50,7 @@ const NAV_ITEMS = [
   { id: "inventory", label: "Inventory", icon: Package },
   { id: "rooms-and-rates", label: "Rooms & Rates", icon: BedDouble },
   { id: "analytics", label: "Analytics & Reports", icon: BarChart3 },
-  { id: "connections", label: "Connections", icon: Globe },
+  { id: "channels", label: "Channels", icon: Globe },
 ];
 
 const SidebarContent = ({
@@ -128,7 +128,7 @@ const SidebarContent = ({
             >
               <Icon className="w-4 h-4 shrink-0" />
               {!collapsed && n.label}
-              {!collapsed && n.id === "connections" && connectionCount > 0 && (
+              {!collapsed && n.id === "channels" && connectionCount > 0 && (
                 <span className="ml-auto w-4 h-4 rounded-full bg-green-500/90 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
                   {connectionCount > 9 ? "9+" : connectionCount}
                 </span>

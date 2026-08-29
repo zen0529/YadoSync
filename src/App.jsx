@@ -13,7 +13,7 @@ import { AnalyticsPage } from "@/features/property-owner/analytics/ui/AnalyticsP
 import { RoomAndRatesPage } from "@/features/property-owner/roomAndRates/pages/roomAndRatesPage";
 import { InventoryPage as NewInventoryPage } from "@/features/property-owner/inventory";
 import { InboxPage } from "@/features/property-owner/inbox/ui/InboxPage";
-import ConnectionsPage from "@/features/property-owner/connections/ui/ConnectionsPage";
+import ChannelsPage from "@/features/property-owner/channels/ui/ChannelsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { AdminOverviewPage } from "@/features/superadmin/overview/page/AdminOverviewPage";
 import { AdminPropertiesPage } from "@/features/superadmin/properties";
@@ -94,7 +94,7 @@ export default function App() {
             <Route path="rooms-and-rates" element={<RoomAndRatesPage />} />
             <Route path="inventory" element={<NewInventoryPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="connections" element={<ConnectionsPage />} />
+            <Route path="channels" element={<ChannelsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
