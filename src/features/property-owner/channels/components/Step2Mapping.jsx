@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { XCircle, Loader2, ArrowRight, ArrowLeft } from "lucide-react";
-import { getChannelMappingDetails } from "../queries";
+import { getChannelMappingDetails } from "../supabase";
 
 // ── Step 2 — Map OTA rooms/rates to local rate plans ─────────────────────────
 const Step2Mapping = ({ platform, hotelId, ratePlans, onNext, onBack, onClose }) => {

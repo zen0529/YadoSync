@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { XCircle, Loader2, ArrowLeft, CheckCheck, Plug } from "lucide-react";
-import { createChannelConnection } from "../queries";
+import { createChannelConnection } from "../supabase";
 
 // ── Step 3 — Review + Activate ────────────────────────────────────────────────
 const Step3Activate = ({

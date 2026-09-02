@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Link2 } from "lucide-react";
-import { disconnectChannelConnection } from "../queries";
+import { disconnectChannelConnection } from "../supabase";
 import { timeAgo } from "./timeAgo";
 
 // ── Platform Row ──────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getMyProperty, getConnections } from "../queries";
+import { getMyProperty, getConnections } from "../supabase";
 import { getRatePlansByProperty } from "@/features/property-owner/roomAndRates/supabase/getRatePlans";
 
 /** Fetch the current user's property (id + channex_property_id) */

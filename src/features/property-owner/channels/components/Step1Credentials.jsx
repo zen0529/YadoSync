@@ -1,29 +1,24 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
-import { testChannelConnection } from "../queries";
+import { handleTest } from "../utils";
 
 // ── Step 1 — Hotel ID + Test Connection ───────────────────────────────────────
-const Step1Credentials = ({ platform, onNext, onClose }) => {
+const Step1Credentials = ({ channel, platform, onNext, onClose }) => {
+  const currentChannel = channel || platform;
   const [hotelId, setHotelId] = useState("");
   const [testing, setTesting] = useState(false);
   const [tested, setTested] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleTest = async () => {
-    if (!hotelId.trim()) return;
-    setTesting(true);
-    setError(null);
-    setTested(false);
-    try {
-      await testChannelConnection({ platform: platform.id, hotelId: hotelId.trim() });
-      setTested(true);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setTesting(false);
-    }
-  };
+  const onTest = () =>
+    handleTest({
+      hotelId,
+      channelId: currentChannel.id,
+      setTesting,
+      setError,
+      setTested,
+    });
 
   return (
     <div className="flex flex-col gap-5">
@@ -39,14 +34,14 @@ const Step1Credentials = ({ platform, onNext, onClose }) => {
             type="text"
             value={hotelId}
             onChange={(e) => { setHotelId(e.target.value); setTested(false); setError(null); }}
-            onKeyDown={(e) => e.key === "Enter" && handleTest()}
-            placeholder={platform.id === "booking" ? "e.g. 1234567" : "Hotel ID"}
+            onKeyDown={(e) => e.key === "Enter" && onTest()}
+            placeholder={platform.name ? `${platform.name} Hotel ID` : "Hotel ID"}
             className="flex-1 h-9 px-3 rounded-lg border border-white/20 bg-white/10 dark:bg-white/5 text-sm text-foreground/85 placeholder:text-muted-foreground/40 outline-none focus:border-green-400/50 focus:ring-1 focus:ring-green-400/20 transition-all"
           />
           <Button
             size="sm"
             variant="outline"
-            onClick={handleTest}
+            onClick={onTest}
             disabled={!hotelId.trim() || testing}
             className="h-9 text-xs shrink-0"
           >

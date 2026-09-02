@@ -30,11 +30,11 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  try {
-    const { platform, hotel_id } = await req.json();
+    const { channel, platform, hotel_id } = await req.json();
+    const targetChannel = channel || platform;
 
-    if (!platform || !hotel_id) {
-      throw new Error("platform and hotel_id are required");
+    if (!targetChannel || !hotel_id) {
+      throw new Error("channel and hotel_id are required");
     }
 
     const channexApiKey = Deno.env.get("CHANNEX_API_KEY");
@@ -46,7 +46,7 @@ serve(async (req) => {
     // doesn't have Channel API access.
     await channexPost(
       "/channels/test_connection",
-      { channel: platform, settings: { hotel_id } },
+      { channel: targetChannel, settings: { hotel_id } },
       channexApiKey,
       CHANNEX_BASE_URL,
     );
