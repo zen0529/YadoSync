@@ -22,7 +22,8 @@ const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL") ?? "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -30,6 +31,7 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  try {
     const { channel, platform, hotel_id } = await req.json();
     const targetChannel = channel || platform;
 
@@ -41,24 +43,37 @@ serve(async (req) => {
     if (!channexApiKey) throw new Error("CHANNEX_API_KEY secret not set");
 
     // POST /channels/test_connection
-    // Returns 200 + { data: { ... } } on success.
-    // Returns 422 with details if credentials are wrong or if the account
-    // doesn't have Channel API access.
-    await channexPost(
+    // Returns 200 + { data: { success: boolean, errors: ... } }.
+    // On Booking.com, invalid credentials return 200 OK with success: false (and errors: null).
+    // Also returns 422 if the account lacks Channel API access.
+    const result = (await channexPost(
       "/channels/test_connection",
       { channel: targetChannel, settings: { hotel_id } },
       channexApiKey,
       CHANNEX_BASE_URL,
-    );
+    )) as any;
+
+    if (result && result.success === false) {
+      console.error(
+        "[testChannelConnection] Test connection failed:",
+        result?.errors ?? result,
+      );
+      throw new Error(
+        "Connection test failed. Please verify your Hotel ID and try again.",
+      );
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("[testChannelConnection]", err.message);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ success: false, error: err.message }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

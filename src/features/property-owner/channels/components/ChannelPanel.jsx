@@ -17,17 +17,36 @@ export const ChannelPanel = ({
   open,
   channel,
   platform,
+  connection,
   property,
   onSuccess,
   onClose,
 }) => {
   const currentChannel = channel || platform;
   const [activeTab, setActiveTab] = useState("general");
+  const [hotelId, setHotelId] = useState(connection?.ota_hotel_id || "");
 
-  // Reset tab when panel reopens
+  // Reset tab and sync hotelId when panel opens or connection changes
   useEffect(() => {
-    if (open) setActiveTab("general");
-  }, [open]);
+    if (open) {
+      if (connection?.connection_status === "connected") {
+        setActiveTab("mapping");
+      } else {
+        setActiveTab("general");
+      }
+      if (connection?.ota_hotel_id) {
+        setHotelId(connection.ota_hotel_id);
+      }
+    }
+  }, [open, connection?.connection_status, connection?.ota_hotel_id]);
+
+  const handleGeneralSuccess = (data) => {
+    if (data?.hotelId) {
+      setHotelId(data.hotelId);
+    }
+    // Auto-advance to mapping tab upon saving/testing hotel ID
+    setActiveTab("mapping");
+  };
 
   return (
     <>
@@ -101,12 +120,19 @@ export const ChannelPanel = ({
               channel={currentChannel}
               platform={currentChannel}
               property={property}
-              onSuccess={onSuccess}
+              onSuccess={handleGeneralSuccess}
               onClose={onClose}
             />
           )}
           {activeTab === "mapping" && (
-            <ChannelMapping platform={currentChannel} property={property} />
+            <ChannelMapping
+              platform={currentChannel}
+              property={property}
+              hotelId={hotelId}
+              connection={connection}
+              onNavigateToGeneral={() => setActiveTab("general")}
+              onSuccess={onSuccess}
+            />
           )}
           {activeTab === "channel" && (
             <ChannelSettings platform={currentChannel} property={property} />

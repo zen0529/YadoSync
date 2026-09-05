@@ -30,10 +30,11 @@ serve(async (req) => {
   }
 
   try {
-    const { property_id, platform } = await req.json();
+    const { property_id, channel, platform } = await req.json();
+    const targetChannel = channel || platform;
 
-    if (!property_id || !platform) {
-      throw new Error("property_id and platform are required");
+    if (!property_id || !targetChannel) {
+      throw new Error("property_id and channel are required");
     }
 
     const channexApiKey = Deno.env.get("CHANNEX_API_KEY");
@@ -49,11 +50,11 @@ serve(async (req) => {
       .from("platform_connections")
       .select("id, channex_channel_id, connection_status")
       .eq("property_id", property_id)
-      .eq("platform", platform)
+      .eq("platform", targetChannel)
       .maybeSingle();
 
     if (lookupError) throw new Error(`Lookup failed: ${lookupError.message}`);
-    if (!row) throw new Error(`No platform_connection found for ${platform}`);
+    if (!row) throw new Error(`No platform_connection found for ${targetChannel}`);
 
     const channexChannelId: string | null = row.channex_channel_id;
 

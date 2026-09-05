@@ -25,7 +25,7 @@ const Step3Activate = ({
       await createChannelConnection({
         propertyId:         property.id,
         channexPropertyId:  property.channex_property_id,
-        platform:           platform.id,
+        channel:            platform.id,
         hotelId,
         groupId,
         ratePlanMappings,

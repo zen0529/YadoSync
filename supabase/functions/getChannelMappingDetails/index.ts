@@ -49,10 +49,11 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, hotel_id } = await req.json();
+    const { channel, platform, hotel_id } = await req.json();
+    const targetChannel = channel || platform;
 
-    if (!platform || !hotel_id) {
-      throw new Error("platform and hotel_id are required");
+    if (!targetChannel || !hotel_id) {
+      throw new Error("channel and hotel_id are required");
     }
 
     const channexApiKey = Deno.env.get("CHANNEX_API_KEY");
@@ -64,7 +65,7 @@ serve(async (req) => {
     // Codes are integers — Channex confirmed trap.
     const mappingRaw = await channexPost(
       "/channels/mapping_details",
-      { channel: platform, settings: { hotel_id } },
+      { channel: targetChannel, settings: { hotel_id } },
       channexApiKey,
       CHANNEX_BASE_URL,
     ) as any;
@@ -73,34 +74,67 @@ serve(async (req) => {
     // The raw response wraps everything under data.attributes or data directly —
     // channexPost already unwraps the outer { data } envelope.
     const rawRooms: any[] = mappingRaw?.rooms ?? mappingRaw?.attributes?.rooms ?? [];
+    const pricing_type: string = mappingRaw?.pricing_type ?? "Standard";
 
-    const rooms = rawRooms.map((room: any) => ({
-      room_code: Number(room.code ?? room.room_code),      // always integer
-      room_name: room.title ?? room.name ?? String(room.code ?? room.room_code),
-      rates: (room.rates ?? []).map((rate: any) => ({
-        rate_code: Number(rate.code ?? rate.rate_code),    // always integer
-        rate_name: rate.title ?? rate.name ?? String(rate.code ?? rate.rate_code),
-        pricing: rate.pricing ?? "OBP",
-        max_persons: rate.max_persons ?? 1,
-        occupancies: rate.occupancies ?? [],
-      })),
-    }));
+    const rooms = rawRooms.map((room: any) => {
+      const roomCode = Number(room.id ?? room.code ?? room.room_code);
+      return {
+        room_code: roomCode,      // always integer
+        room_name: room.title ?? room.name ?? String(roomCode),
+        rates: (room.rates ?? []).map((rate: any) => {
+          const rateCode = Number(rate.id ?? rate.code ?? rate.rate_code);
+          return {
+            rate_code: rateCode,    // always integer
+            rate_name: rate.title ?? rate.name ?? String(rateCode),
+            pricing: rate.pricing ?? pricing_type,
+            readonly: Boolean(rate.readonly),
+            max_persons: rate.max_persons ?? 1,
+            occupancies: rate.occupancies ?? [],
+          };
+        }),
+      };
+    });
 
     // ── 2. Resolve group_id ────────────────────────────────────────────────
     // GET /groups returns the Channex groups the API key can access.
     // We take the first group; for most accounts there's only one.
     // group_id is required on POST /channels — without it Channex returns
     // 422 "You not have access to requested group".
-    const groups = await channexGet("/groups", channexApiKey, CHANNEX_BASE_URL) as any[];
+    const groups = (await channexGet("/groups", channexApiKey, CHANNEX_BASE_URL)) as any[];
     const group_id: string | null = groups?.[0]?.id ?? null;
 
     if (!group_id) {
-      throw new Error("Could not resolve a Channex group_id. Ensure the API key has access to at least one group.");
+      throw new Error(
+        "Could not resolve a Channex group_id. Ensure the API key has access to at least one group.",
+      );
     }
 
-    return new Response(JSON.stringify({ rooms, group_id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // ── 3. Fetch connection details (Step 4: Currency) ─────────────────────
+    let currency: string | null = null;
+    try {
+      const connDetailsRaw = (await channexPost(
+        "/channels/connection_details",
+        { channel: targetChannel, settings: { hotel_id } },
+        channexApiKey,
+        CHANNEX_BASE_URL,
+      )) as any;
+      currency =
+        connDetailsRaw?.attributes?.currency ??
+        connDetailsRaw?.currency ??
+        null;
+    } catch (connErr: any) {
+      console.warn(
+        "[getChannelMappingDetails] Could not fetch connection_details:",
+        connErr.message,
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ rooms, pricing_type, currency, group_id }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (err: any) {
     console.error("[getChannelMappingDetails]", err.message);
     return new Response(JSON.stringify({ error: err.message }), {

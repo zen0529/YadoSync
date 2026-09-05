@@ -3,7 +3,7 @@ import BookingComGenSet from "./BookingComGenSet";
 // ── Platform → Component map ───────────────────────────────────────────────────
 // Add new platform entries here as they are implemented.
 const GEN_SET_MAP = {
-  booking: BookingComGenSet,
+  BookingCom: BookingComGenSet,
   // airbnb: AirbnbGenSet,
 };
 

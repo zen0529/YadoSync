@@ -19,7 +19,7 @@ const Step2Mapping = ({ platform, hotelId, ratePlans, onNext, onBack, onClose })
       setLoadingDetails(true);
       setLoadError(null);
       try {
-        const { rooms, group_id } = await getChannelMappingDetails({ platform: platform.id, hotelId });
+        const { rooms, group_id } = await getChannelMappingDetails({ channel: platform.id, hotelId });
         if (!cancelled) {
           setOtaRooms(rooms ?? []);
           setGroupId(group_id);

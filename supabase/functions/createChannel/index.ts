@@ -55,6 +55,7 @@ serve(async (req) => {
   try {
     const {
       property_id,
+      channel,
       platform,
       hotel_id,
       group_id,
@@ -62,8 +63,10 @@ serve(async (req) => {
       rate_plan_mappings,
     } = await req.json();
 
-    if (!property_id || !platform || !hotel_id || !group_id || !channex_property_id || !rate_plan_mappings?.length) {
-      throw new Error("property_id, platform, hotel_id, group_id, channex_property_id and rate_plan_mappings are required");
+    const targetChannel = channel || platform;
+
+    if (!property_id || !targetChannel || !hotel_id || !group_id || !channex_property_id || !rate_plan_mappings?.length) {
+      throw new Error("property_id, channel, hotel_id, group_id, channex_property_id and rate_plan_mappings are required");
     }
 
     const channexApiKey = Deno.env.get("CHANNEX_API_KEY");
@@ -74,21 +77,24 @@ serve(async (req) => {
     // UI <select> values are strings; the edge function does the cast so the
     // caller doesn't have to worry about it.
     const channexRatePlans = rate_plan_mappings.map((m: any) => ({
-      rate_plan_id: m.channex_rate_plan_id,
+      rate_plan_id: m.channex_rate_plan_id || m.rate_plan_id,
       settings: {
         room_type_code: Number(m.room_type_code),   // integer
         rate_plan_code: Number(m.rate_plan_code),    // integer
         pricing_type:   m.pricing_type ?? "OBP",
-        primary_occ:    m.occupancy ?? 2,
+        occupancy:      Number(m.occupancy) || 1,
+        primary_occ:    typeof m.primary_occ === "boolean" ? m.primary_occ : true,
+        readonly:       Boolean(m.readonly ?? false),
       },
     }));
 
     // ── 2. POST /channels ─────────────────────────────────────────────────
     const channelPayload = {
       channel: {
-        property_id: channex_property_id,
+        channel: targetChannel,       // "BookingCom"
         group_id,
-        channel_id: platform,       // "booking", "airbnb", "expedia", etc.
+        title: `${targetChannel} connection`,
+        properties: [channex_property_id],
         settings: { hotel_id },
         rate_plans: channexRatePlans,
       },
@@ -104,7 +110,7 @@ serve(async (req) => {
     const channexChannelId: string = channelData?.id ?? channelData?.attributes?.id;
     if (!channexChannelId) throw new Error("Channex did not return a channel ID");
 
-    console.log(`[createChannel] Created Channex channel ${channexChannelId} for platform=${platform}`);
+    console.log(`[createChannel] Created Channex channel ${channexChannelId} for channel=${targetChannel}`);
 
     // ── 3. Activate the channel ───────────────────────────────────────────
     // Channels are created inactive — must call activate to go live.
@@ -145,7 +151,7 @@ serve(async (req) => {
         .upsert(
           {
             property_id,
-            platform,
+            platform:            targetChannel,
             channex_channel_id:  channexChannelId,
             channex_group_id:    group_id,
             ota_hotel_id:        hotel_id,

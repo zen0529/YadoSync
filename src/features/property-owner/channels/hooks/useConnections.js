@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyProperty, getConnections } from "../supabase";
 import { getRatePlansByProperty } from "@/features/property-owner/roomAndRates/supabase/getRatePlans";
+import { getRoomTypesByProperty } from "@/features/property-owner/roomAndRates/supabase/getRoomTypes";
 
 /** Fetch the current user's property (id + channex_property_id) */
 export const useMyProperty = (userId) => {
@@ -45,17 +46,25 @@ export const useConnections = (propertyId) => {
 };
 
 export const useRatePlansForMapping = (propertyId) => {
+  const [roomTypes, setRoomTypes] = useState([]);
   const [ratePlans, setRatePlans] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!propertyId) return;
     setLoading(true);
-    getRatePlansByProperty(propertyId)
-      .then(setRatePlans)
+    Promise.all([
+      getRoomTypesByProperty(propertyId),
+      getRatePlansByProperty(propertyId),
+    ])
+      .then(([rt, rp]) => {
+        setRoomTypes(rt || []);
+        setRatePlans(rp || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [propertyId]);
 
-  return { ratePlans, loading };
+  return { roomTypes, ratePlans, loading };
 };
+

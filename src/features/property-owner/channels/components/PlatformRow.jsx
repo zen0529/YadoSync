@@ -23,7 +23,7 @@ const PlatformRow = ({ platform, connection, property, onNotify, onRefresh, onCo
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
-      await disconnectChannelConnection({ propertyId: property.id, platform: platform.id });
+      await disconnectChannelConnection({ propertyId: property.id, channel: platform.id });
       setShowConfirm(false);
       onNotify("success", `${platform.name} disconnected`);
       onRefresh();
@@ -82,14 +82,24 @@ const PlatformRow = ({ platform, connection, property, onNotify, onRefresh, onCo
 
           {/* Action button */}
           {isConnected ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowConfirm(true)}
-              className="text-xs h-8 shrink-0 text-muted-foreground/70 hover:text-red-500 hover:border-red-300 dark:hover:border-red-400/50 transition-colors"
-            >
-              Disconnect
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onConnect(platform)}
+                className="text-xs h-8 text-foreground/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              >
+                Configure
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowConfirm(true)}
+                className="text-xs h-8 text-muted-foreground/70 hover:text-red-500 hover:border-red-300 dark:hover:border-red-400/50 transition-colors"
+              >
+                Disconnect
+              </Button>
+            </div>
           ) : platform.supported ? (
             <Button
               size="sm"

@@ -135,6 +135,7 @@ export default function ChannelsPage() {
       <ChannelPanel
         open={panelOpen}
         platform={selectedPlatform}
+        connection={getConnection(selectedPlatform?.id)}
         property={property}
         onSuccess={handlePanelSuccess}
         onClose={handlePanelClose}
