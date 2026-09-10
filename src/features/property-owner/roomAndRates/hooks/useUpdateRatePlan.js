@@ -6,8 +6,14 @@ const updateRatePlanFunction = async ({ localId, channexRatePlanId, form }) => {
     body: { localId, channexRatePlanId, form },
   });
 
-  if (functionError) throw new Error(`Function Error: ${functionError.message}`);
-  if (data?.error) throw new Error(data.error);
+  if (functionError) {
+    console.error("[useUpdateRatePlan] function error:", functionError);
+    throw new Error("Something went wrong while updating the rate plan. Please try again.");
+  }
+  if (data?.error) {
+    console.error("[useUpdateRatePlan] edge function error:", data.error);
+    throw new Error("Something went wrong while updating the rate plan. Please try again.");
+  }
 
   return data.row;
 };

@@ -13,13 +13,17 @@ export const useCreateRoomType = () => {
         body: { propertyId, channexPropertyId, form },
       });
 
-      if (functionError) throw new Error(`Function Error: ${functionError.message}`);
-      if (data?.error) throw new Error(data.error);
+      if (functionError) {
+        console.error("[useCreateRoomType] function error:", functionError);
+        throw new Error("Something went wrong while creating the room type. Please try again.");
+      }
 
       return data.row;
     } catch (err) {
-      setError(err);
-      throw err;
+      console.error("[useCreateRoomType] createRoomType failed:", err);
+      const message = "Something went wrong while creating the room type. Please try again.";
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }

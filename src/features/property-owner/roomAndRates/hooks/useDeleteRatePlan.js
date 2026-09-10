@@ -6,8 +6,14 @@ const deleteRatePlanFunction = async ({ localId, channexRatePlanId }) => {
     body: { localId, channexRatePlanId },
   });
 
-  if (functionError) throw new Error(`Function Error: ${functionError.message}`);
-  if (data?.error) throw new Error(data.error);
+  if (functionError) {
+    console.error("[useDeleteRatePlan] function error:", functionError);
+    throw new Error("Something went wrong while deleting the rate plan. Please try again.");
+  }
+  if (data?.error) {
+    console.error("[useDeleteRatePlan] edge function error:", data.error);
+    throw new Error("Something went wrong while deleting the rate plan. Please try again.");
+  }
 
   return true;
 };

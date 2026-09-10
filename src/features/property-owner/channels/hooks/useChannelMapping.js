@@ -79,9 +79,7 @@ export const useChannelMapping = ({
       }
     } catch (err) {
       console.error("[useChannelMapping] Fetch failed:", err);
-      setLoadError(
-        err.message || "Failed to load mapping details from Channex."
-      );
+      setLoadError("Failed to load channel mapping details. Please try again.");
     } finally {
       setLoadingDetails(false);
     }
@@ -223,10 +221,9 @@ export const useChannelMapping = ({
         setTimeout(() => setSaveSuccess(false), 4000);
       }
     } catch (err) {
+      // Keep the raw error in the console for developer debugging
       console.error("[useChannelMapping] Save failed:", err);
-      setSaveError(
-        err.message || "Failed to save mapping and activate channel."
-      );
+      setSaveError("Something went wrong while connecting your channel. Please try again.");
     } finally {
       setSaving(false);
     }

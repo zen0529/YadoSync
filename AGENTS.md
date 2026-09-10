@@ -211,6 +211,27 @@ Edge Functions serve as the secure bridge between YadoManagement and the Channex
 - Use **shadcn/ui** components — do not create custom UI primitives if shadcn has it (e.g., use shadcn `DropdownMenu` from `@/components/ui/dropdown-menu`, `Dialog` from `@/components/ui/dialog`, `Button` from `@/components/ui/button`, `Select` from `@/components/ui/select`, `Input` from `@/components/ui/input`, `DeleteDialog` from `@/components/ui/delete-dialog`)
 - Tailwind for all styling — no inline styles, no CSS modules
 - **Design Tokens**: Always refer to `token.json` in the project root for colors, fonts, shadows, and spacing tokens to ensure visual consistency. Do not introduce arbitrary colors outside the palette.
+- **Error Handling — Two-Layer Rule**:
+  - **Edge Functions**: Always `console.error` the full raw error (including any Channex/Supabase error body) for developer visibility. The `error` field returned in the response body must be a user-friendly message — never a raw API error string (e.g. never `"Channex /channels failed (422): {...}"`).
+    ```ts
+    // ✅ Correct
+    } catch (err: any) {
+      console.error("[myFunction] internal error:", err.message); // full detail for dev
+      return new Response(
+        JSON.stringify({ error: "Something went wrong. Please try again." }),
+        { status: 400, headers: corsHeaders },
+      );
+    }
+    ```
+  - **Hooks (`hooks/`)**: Always `console.error` the raw `err` object. The value passed to state (e.g. `setSaveError`, `setLoadError`) must be a plain, user-readable sentence — never `err.message` verbatim when it could contain internal API details.
+    ```js
+    // ✅ Correct
+    } catch (err) {
+      console.error("[useMyHook] operation failed:", err); // raw detail for dev
+      setSaveError("Something went wrong. Please try again.");
+    }
+    ```
+
 
 ## What NOT to Do
 
@@ -223,3 +244,4 @@ Edge Functions serve as the secure bridge between YadoManagement and the Channex
 - Do not suggest replacing Channex with direct OTA API integrations
 - Do not build custom UI primitives when a shadcn/ui equivalent is available
 - Do not let a `components/` folder grow flat with more than ~5 files — apply the co-location pattern (subfolder + `index.js` barrel) once a parent component has multiple exclusive children
+- Do not expose raw API errors in the UI — never pass `err.message` from Channex, Supabase, or any external service directly to UI state or edge function response bodies. Always log the raw error internally and surface only a user-friendly sentence.

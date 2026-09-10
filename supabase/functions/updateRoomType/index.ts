@@ -126,9 +126,10 @@ serve(async (req) => {
     });
 
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[updateRoomType] internal error:", err.message);
+    return new Response(
+      JSON.stringify({ error: "Something went wrong while updating the room type. Please try again." }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });

@@ -100,9 +100,10 @@ serve(async (req) => {
     });
 
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[deleteRoomType] internal error:", err.message);
+    return new Response(
+      JSON.stringify({ error: "Something went wrong while deleting the room type. Please try again." }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });

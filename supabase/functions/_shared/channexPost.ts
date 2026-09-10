@@ -57,7 +57,21 @@ export async function channexPost(
       return json?.data ?? json;
     }
 
-    lastError = new Error(`Channex ${path} failed (${res.status})`);
+    // Read the error body so Channex's validation message is visible in logs
+    let channexErrorDetail = "";
+    try {
+      const errBody = await res.json();
+      channexErrorDetail = JSON.stringify(errBody);
+      console.error(`[channex] POST ${path} error body (${res.status}):`, channexErrorDetail);
+    } catch {
+      // body wasn't JSON — ignore
+    }
+
+    const errorMsg = channexErrorDetail
+      ? `Channex ${path} failed (${res.status}): ${channexErrorDetail}`
+      : `Channex ${path} failed (${res.status})`;
+
+    lastError = new Error(errorMsg);
 
     if (!RETRYABLE_STATUSES.has(res.status)) {
       // 4xx (except 429) are the caller's fault — don't retry

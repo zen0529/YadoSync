@@ -1,4 +1,11 @@
 import { TriangleAlert } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import RateMappingRow from "./RateMappingRow";
 import { filterAvailableRatePlans } from "../../utils/mappingUtils";
 
@@ -46,24 +53,34 @@ export const RoomMappingCard = ({
           <span className="text-[11px] font-medium text-muted-foreground/70 shrink-0">
             Room Type:
           </span>
-          <select
-            value={selectedRoomTypeId}
-            onChange={(e) =>
-              onRoomTypeSelect && onRoomTypeSelect(room.room_code, e.target.value)
+          <Select
+            value={selectedRoomTypeId || "__unmapped__"}
+            onValueChange={(val) =>
+              onRoomTypeSelect &&
+              onRoomTypeSelect(room.room_code, val === "__unmapped__" ? "" : val)
             }
-            className={`w-full h-8 px-2.5 rounded-lg border text-xs outline-none transition-all ${
-              isRoomMapped
-                ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20 text-foreground font-medium"
-                : "border-black/15 dark:border-white/15 bg-white dark:bg-[#16171d] text-muted-foreground"
-            } focus:border-green-500 focus:ring-1 focus:ring-green-500/20`}
           >
-            <option value="">— Select Local Room Type —</option>
-            {availableRoomTypes.map((rt) => (
-              <option key={rt.id} value={rt.id}>
-                {rt.title}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              size="sm"
+              className={`flex-1 min-w-0 h-8 px-2.5 rounded-lg border text-xs outline-none transition-all ${
+                isRoomMapped
+                  ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20 text-foreground font-medium"
+                  : "border-black/15 dark:border-white/15 bg-white dark:bg-[#16171d] text-muted-foreground"
+              } focus:border-green-500 focus:ring-1 focus:ring-green-500/20`}
+            >
+              <SelectValue placeholder="— Select Local Room Type —" />
+            </SelectTrigger>
+            <SelectContent className="glass-dropdown rounded-xl border-white/30 max-h-56">
+              <SelectItem value="__unmapped__" className="text-xs text-muted-foreground">
+                — Select Local Room Type —
+              </SelectItem>
+              {availableRoomTypes.map((rt) => (
+                <SelectItem key={rt.id} value={rt.id} className="text-xs">
+                  {rt.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

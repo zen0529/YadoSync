@@ -13,13 +13,17 @@ export const useUpdateRoomType = () => {
         body: { localId, channexRoomTypeId, propertyId, form },
       });
 
-      if (functionError) throw new Error(`Function Error: ${functionError.message}`);
-      if (data?.error) throw new Error(data.error);
+      if (functionError) {
+        console.error("[useUpdateRoomType] function error:", functionError);
+        throw new Error("Something went wrong while updating the room type. Please try again.");
+      }
 
       return data.row;
     } catch (err) {
-      setError(err);
-      throw err;
+      console.error("[useUpdateRoomType] updateRoomType failed:", err);
+      const message = "Something went wrong while updating the room type. Please try again.";
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }

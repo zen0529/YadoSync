@@ -13,19 +13,25 @@ export const useDeleteRoomType = () => {
         body: { localId, channexRoomTypeId, propertyId, restoringData },
       });
 
-      if (functionError) throw new Error(`Function Error: ${functionError.message}`);
+      if (functionError) {
+        console.error("[useDeleteRoomType] function error:", functionError);
+        throw new Error("Something went wrong while deleting the room type. Please try again.");
+      }
       if (data?.error) {
-        // Return the newChannexId if the rollback occurred
+        console.error("[useDeleteRoomType] edge function error:", data.error);
+        const message = "Something went wrong while deleting the room type. Please try again.";
         if (data.newChannexId) {
-          throw new Error(data.error, { cause: { newChannexId: data.newChannexId } });
+          throw new Error(message, { cause: { newChannexId: data.newChannexId } });
         }
-        throw new Error(data.error);
+        throw new Error(message);
       }
 
       return true;
     } catch (err) {
-      setError(err);
-      throw err;
+      console.error("[useDeleteRoomType] deleteRoomType failed:", err);
+      const message = "Something went wrong while deleting the room type. Please try again.";
+      setError(message);
+      throw err; // re-throw so callers can read err.cause.newChannexId if present
     } finally {
       setLoading(false);
     }

@@ -291,9 +291,10 @@ serve(async (req) => {
       throw error; // Re-throw to be caught by outer catch block
     }
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[createRatePlan] internal error:", err.message);
+    return new Response(
+      JSON.stringify({ error: "Something went wrong while creating the rate plan. Please try again." }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });

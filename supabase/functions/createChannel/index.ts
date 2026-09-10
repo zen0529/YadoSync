@@ -44,7 +44,8 @@ const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL") ?? "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -65,8 +66,17 @@ serve(async (req) => {
 
     const targetChannel = channel || platform;
 
-    if (!property_id || !targetChannel || !hotel_id || !group_id || !channex_property_id || !rate_plan_mappings?.length) {
-      throw new Error("property_id, channel, hotel_id, group_id, channex_property_id and rate_plan_mappings are required");
+    if (
+      !property_id ||
+      !targetChannel ||
+      !hotel_id ||
+      !group_id ||
+      !channex_property_id ||
+      !rate_plan_mappings?.length
+    ) {
+      throw new Error(
+        "property_id, channel, hotel_id, group_id, channex_property_id and rate_plan_mappings are required",
+      );
     }
 
     const channexApiKey = Deno.env.get("CHANNEX_API_KEY");
@@ -79,19 +89,19 @@ serve(async (req) => {
     const channexRatePlans = rate_plan_mappings.map((m: any) => ({
       rate_plan_id: m.channex_rate_plan_id || m.rate_plan_id,
       settings: {
-        room_type_code: Number(m.room_type_code),   // integer
-        rate_plan_code: Number(m.rate_plan_code),    // integer
-        pricing_type:   m.pricing_type ?? "OBP",
-        occupancy:      Number(m.occupancy) || 1,
-        primary_occ:    typeof m.primary_occ === "boolean" ? m.primary_occ : true,
-        readonly:       Boolean(m.readonly ?? false),
+        room_type_code: Number(m.room_type_code), // integer
+        rate_plan_code: Number(m.rate_plan_code), // integer
+        pricing_type: m.pricing_type ?? "OBP",
+        occupancy: Number(m.occupancy) || 1,
+        primary_occ: typeof m.primary_occ === "boolean" ? m.primary_occ : true,
+        readonly: Boolean(m.readonly ?? false),
       },
     }));
 
     // ── 2. POST /channels ─────────────────────────────────────────────────
     const channelPayload = {
       channel: {
-        channel: targetChannel,       // "BookingCom"
+        channel: targetChannel, // "BookingCom"
         group_id,
         title: `${targetChannel} connection`,
         properties: [channex_property_id],
@@ -100,17 +110,21 @@ serve(async (req) => {
       },
     };
 
-    const channelData = await channexPost(
+    const channelData = (await channexPost(
       "/channels",
       channelPayload,
       channexApiKey,
       CHANNEX_BASE_URL,
-    ) as any;
+    )) as any;
 
-    const channexChannelId: string = channelData?.id ?? channelData?.attributes?.id;
-    if (!channexChannelId) throw new Error("Channex did not return a channel ID");
+    const channexChannelId: string =
+      channelData?.id ?? channelData?.attributes?.id;
+    if (!channexChannelId)
+      throw new Error("Channex did not return a channel ID");
 
-    console.log(`[createChannel] Created Channex channel ${channexChannelId} for channel=${targetChannel}`);
+    console.log(
+      `[createChannel] Created Channex channel ${channexChannelId} for channel=${targetChannel}`,
+    );
 
     // ── 3. Activate the channel ───────────────────────────────────────────
     // Channels are created inactive — must call activate to go live.
@@ -125,17 +139,30 @@ serve(async (req) => {
     } catch (activateErr: any) {
       // Activation failure is non-fatal in terms of data integrity,
       // but we should clean up and let the user retry.
-      console.error(`[createChannel] Activate failed: ${activateErr.message} — rolling back channel`);
+      console.error(
+        `[createChannel] Activate failed: ${activateErr.message} — rolling back channel`,
+      );
       try {
-        await channexPost(`/channels/${channexChannelId}/deactivate`, {}, channexApiKey, CHANNEX_BASE_URL);
-      } catch { /* ignore */ }
+        await channexPost(
+          `/channels/${channexChannelId}/deactivate`,
+          {},
+          channexApiKey,
+          CHANNEX_BASE_URL,
+        );
+      } catch {
+        /* ignore */
+      }
       try {
         await fetch(`${CHANNEX_BASE_URL}/api/v1/channels/${channexChannelId}`, {
           method: "DELETE",
           headers: { "user-api-key": channexApiKey },
         });
-      } catch { /* ignore */ }
-      throw new Error(`Channel created but activation failed: ${activateErr.message}`);
+      } catch {
+        /* ignore */
+      }
+      throw new Error(
+        `Channel created but activation failed: ${activateErr.message}`,
+      );
     }
 
     // ── 4. Upsert Supabase platform_connection ────────────────────────────
@@ -151,41 +178,61 @@ serve(async (req) => {
         .upsert(
           {
             property_id,
-            platform:            targetChannel,
-            channex_channel_id:  channexChannelId,
-            channex_group_id:    group_id,
-            ota_hotel_id:        hotel_id,
-            mapping_payload:     rate_plan_mappings,
-            connection_status:   "connected",
-            connected_at:        new Date().toISOString(),
+            platform: targetChannel,
+            channex_channel_id: channexChannelId,
+            channex_group_id: group_id,
+            ota_hotel_id: hotel_id,
+            mapping_payload: rate_plan_mappings,
+            connection_status: "connected",
+            connected_at: new Date().toISOString(),
           },
           { onConflict: "property_id,platform" },
         );
 
-      if (upsertError) throw new Error(`Supabase upsert failed: ${upsertError.message}`);
+      if (upsertError)
+        throw new Error(`Supabase upsert failed: ${upsertError.message}`);
     } catch (supabaseErr: any) {
       // Rollback: deactivate then delete the Channex channel
-      console.error(`[createChannel] Supabase write failed — rolling back Channex channel ${channexChannelId}`);
+      console.error(
+        `[createChannel] Supabase write failed — rolling back Channex channel ${channexChannelId}`,
+      );
       try {
-        await channexPost(`/channels/${channexChannelId}/deactivate`, {}, channexApiKey, CHANNEX_BASE_URL);
-      } catch { /* ignore */ }
+        await channexPost(
+          `/channels/${channexChannelId}/deactivate`,
+          {},
+          channexApiKey,
+          CHANNEX_BASE_URL,
+        );
+      } catch {
+        /* ignore */
+      }
       try {
         await fetch(`${CHANNEX_BASE_URL}/api/v1/channels/${channexChannelId}`, {
           method: "DELETE",
           headers: { "user-api-key": channexApiKey },
         });
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       throw supabaseErr;
     }
 
-    return new Response(JSON.stringify({ channex_channel_id: channexChannelId }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ channex_channel_id: channexChannelId }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (err: any) {
-    console.error("[createChannel]", err.message);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Log the full technical detail for the developer — never expose to users.
+    console.error("[createChannel] internal error:", err.message);
+
+    return new Response(
+      JSON.stringify({ error: "Something went wrong while connecting your channel. Please try again." }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
