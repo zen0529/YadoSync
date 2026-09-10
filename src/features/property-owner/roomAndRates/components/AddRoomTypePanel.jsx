@@ -24,7 +24,6 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
     occ_children: 0,
     occ_infants: 0,
     default_occupancy: 2,
-    capacity: 2,
     room_kind: "room",
     description: "",
     content: {
@@ -43,7 +42,6 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
         occ_children: roomTypeToEdit.occ_children || 0,
         occ_infants: roomTypeToEdit.occ_infants || 0,
         default_occupancy: roomTypeToEdit.default_occupancy || 2,
-        capacity: roomTypeToEdit.capacity || 2,
         room_kind: roomTypeToEdit.room_kind || "room",
         description: roomTypeToEdit.content_description || "",
         content: {
@@ -65,7 +63,6 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
         occ_children: 0,
         occ_infants: 0,
         default_occupancy: 2,
-        capacity: 2,
         room_kind: "room",
         description: "",
         content: {
@@ -207,26 +204,15 @@ export const AddRoomTypePanel = ({ open, onClose, roomTypeToEdit, onSave, submit
                     />
                   </Field>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label={<>Number of Rooms <span className="text-red-500">*</span></>}>
-                      <input
-                        className={inputCls}
-                        type="number"
-                        min="1"
-                        value={form.count_of_rooms}
-                        onChange={e => setForm(f => ({ ...f, count_of_rooms: e.target.value }))}
-                      />
-                    </Field>
-                    <Field label={<>Total Capacity <span className="text-red-500">*</span></>}>
-                      <input
-                        className={inputCls}
-                        type="number"
-                        min="1"
-                        value={form.capacity}
-                        onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
-                      />
-                    </Field>
-                  </div>
+                  <Field label={<>Number of Rooms <span className="text-red-500">*</span></>}>
+                    <input
+                      className={inputCls}
+                      type="number"
+                      min="1"
+                      value={form.count_of_rooms}
+                      onChange={e => setForm(f => ({ ...f, count_of_rooms: e.target.value }))}
+                    />
+                  </Field>
 
                   <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mt-4 border-t border-black/5 dark:border-white/10 pt-4">Occupancy Limits</p>
                   <div className="grid grid-cols-2 gap-3">

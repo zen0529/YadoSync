@@ -45,7 +45,7 @@ serve(async (req) => {
         occ_children: Number(form.occ_children) || 0,
         occ_infants: Number(form.occ_infants) || 0,
         default_occupancy: Number(form.default_occupancy) || 2,
-        capacity: Number(form.capacity) || null,
+        capacity: null,
         room_kind: form.room_kind || "room",
         content: {
           description: form.description || undefined,
@@ -88,7 +88,7 @@ serve(async (req) => {
             occ_children: Number(form.occ_children) || 0,
             occ_infants: Number(form.occ_infants) || 0,
             default_occupancy: Number(form.default_occupancy) || 2,
-            capacity: Number(form.capacity) || null,
+            capacity: null,
             room_kind: form.room_kind || "room",
             content_description: form.description || null,
           },
