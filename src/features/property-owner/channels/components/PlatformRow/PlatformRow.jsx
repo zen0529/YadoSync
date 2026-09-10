@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Link2 } from "lucide-react";
-import { disconnectChannelConnection } from "../supabase";
+import { disconnectChannelConnection } from "../../supabase";
 import { timeAgo } from "./timeAgo";
 
 // ── Platform Row ──────────────────────────────────────────────────────────────
@@ -27,8 +27,8 @@ const PlatformRow = ({ platform, connection, property, onNotify, onRefresh, onCo
       setShowConfirm(false);
       onNotify("success", `${platform.name} disconnected`);
       onRefresh();
-    } catch {
-      onNotify("error", "Something went wrong. Please try again.");
+    } catch (err) {
+      onNotify("error", err?.message || "Something went wrong. Please try again.");
     } finally {
       setDisconnecting(false);
     }
@@ -148,4 +148,3 @@ const PlatformRow = ({ platform, connection, property, onNotify, onRefresh, onCo
 };
 
 export default PlatformRow;
-

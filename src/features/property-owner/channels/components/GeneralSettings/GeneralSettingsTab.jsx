@@ -8,7 +8,17 @@ const GEN_SET_MAP = {
 };
 
 // ── General Settings tab (platform router) ─────────────────────────────────────
-const GeneralSettingsTab = ({ channel, platform, onSuccess, onClose }) => {
+const GeneralSettingsTab = ({
+  channel,
+  platform,
+  property,
+  hotelId,
+  onHotelIdChange,
+  isTested,
+  setIsTested,
+  onSuccess,
+  onClose,
+}) => {
   const currentChannel = channel || platform;
   const PlatformGenSet = GEN_SET_MAP[currentChannel?.id];
 
@@ -30,6 +40,11 @@ const GeneralSettingsTab = ({ channel, platform, onSuccess, onClose }) => {
     <PlatformGenSet
       channel={currentChannel}
       platform={currentChannel}
+      property={property}
+      hotelId={hotelId}
+      onHotelIdChange={onHotelIdChange}
+      isTested={isTested}
+      setIsTested={setIsTested}
       onSuccess={onSuccess}
       onClose={onClose}
     />

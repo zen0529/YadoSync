@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { X, Settings2, Map, SlidersHorizontal } from "lucide-react";
 import ChannelMapping from "./ChannelMapping";
-import ChannelSettings from "./ChannelSettings";
-import GeneralSettingsTab from "./GeneralSettingsTab";
+import GeneralSettingsTab from "./GeneralSettings";
 
 // ── Tab definitions ────────────────────────────────────────────────────────────
 const TABS = [
   { id: "general", label: "General Settings", icon: Settings2 },
   { id: "mapping", label: "Mapping", icon: Map },
-  { id: "channel", label: "Channel Settings", icon: SlidersHorizontal },
 ];
 
 // ── Channel Panel ──────────────────────────────────────────────────────────────
@@ -23,30 +21,44 @@ export const ChannelPanel = ({
   onClose,
 }) => {
   const currentChannel = channel || platform;
+  const isAlreadyConnected = connection?.connection_status === "connected";
+
   const [activeTab, setActiveTab] = useState("general");
   const [hotelId, setHotelId] = useState(connection?.ota_hotel_id || "");
+  const [isTested, setIsTested] = useState(isAlreadyConnected);
 
   // Reset tab and sync hotelId when panel opens or connection changes
   useEffect(() => {
     if (open) {
-      if (connection?.connection_status === "connected") {
+      if (isAlreadyConnected) {
         setActiveTab("mapping");
+        setIsTested(true);
       } else {
         setActiveTab("general");
+        setIsTested(false);
       }
       if (connection?.ota_hotel_id) {
         setHotelId(connection.ota_hotel_id);
       }
     }
-  }, [open, connection?.connection_status, connection?.ota_hotel_id]);
+  }, [open, isAlreadyConnected, connection?.ota_hotel_id]);
+
+  const handleHotelIdChange = (newId) => {
+    setHotelId(newId);
+    setIsTested(false);
+  };
 
   const handleGeneralSuccess = (data) => {
     if (data?.hotelId) {
       setHotelId(data.hotelId);
     }
+    setIsTested(true);
     // Auto-advance to mapping tab upon saving/testing hotel ID
     setActiveTab("mapping");
   };
+
+  const canAccessMapping =
+    isTested || isAlreadyConnected || Boolean(connection?.ota_hotel_id);
 
   return (
     <>
@@ -96,21 +108,29 @@ export const ChannelPanel = ({
 
         {/* Tabs */}
         <div className="flex gap-1 px-4 py-3 border-b border-black/5 dark:border-white/10 shrink-0 overflow-x-auto">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
-                activeTab === id
-                  ? "bg-green-500 text-white shadow-md shadow-green-500/25"
-                  : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          ))}
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const isMappingTab = id === "mapping";
+            const isDisabled = isMappingTab && !canAccessMapping;
+
+            return (
+              <button
+                key={id}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+                  isDisabled
+                    ? "opacity-40 cursor-not-allowed text-muted-foreground"
+                    : activeTab === id
+                      ? "bg-green-500 text-white shadow-md shadow-green-500/25"
+                      : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab content */}
@@ -120,6 +140,10 @@ export const ChannelPanel = ({
               channel={currentChannel}
               platform={currentChannel}
               property={property}
+              hotelId={hotelId}
+              onHotelIdChange={handleHotelIdChange}
+              isTested={isTested}
+              setIsTested={setIsTested}
               onSuccess={handleGeneralSuccess}
               onClose={onClose}
             />
@@ -133,9 +157,6 @@ export const ChannelPanel = ({
               onNavigateToGeneral={() => setActiveTab("general")}
               onSuccess={onSuccess}
             />
-          )}
-          {activeTab === "channel" && (
-            <ChannelSettings platform={currentChannel} property={property} />
           )}
         </div>
       </div>

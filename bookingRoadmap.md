@@ -15,7 +15,7 @@
 | 2 | Test connection | ✅ Done — checks result.success and formats errors |
 | 3 | Get mapping details | ✅ Done — aligned to id/title & ChannelMapping built |
 | 4 | Get connection details (currency) | ✅ Done — retrieved via connection_details & displayed in UI |
-| 5 | Fetch Channex rooms/rates (`multi_occupancy`) | 🟡 Partial — rate plans fetched by room type |
+| 5 | Fetch Channex rooms/rates (`multi_occupancy`) | ✅ Done — TanStack Query, synced-only rate plans, per-room warning, save guard |
 | 6 | Build the mapping structure | ✅ Done — room-first cascading mapping with primary_occ & readonly |
 | 7 | Create the connection | ✅ Done — fixed payload (properties, channel, primary_occ, occupancy) & deployed |
 | 8 | Activate the connection | ✅ Done — activated on creation, wired to Save & Connect UI |
@@ -117,11 +117,21 @@ No need to call this at runtime. The descriptor is stable — use the stored JS 
 GET /api/v1/room_types/options?filter[property_id]={id}
 GET /api/v1/rate_plans/options?filter[property_id]={id}&multi_occupancy=true
 ```
-**Status:** 🟡 Partial — rate plans fetched by room type
+**Status:** ✅ Done
 
 **What's implemented:**
-- [`useRatePlansForMapping`](file:///c:/Users/SEJI/YadoSync/src/features/property-owner/channels/hooks/useConnections.js#L47) hook fetches both room types and rate plans ✅
-- Rates are dynamically filtered per selected Room Type in `ChannelMapping.jsx` ✅
+- New edge function [`getChannexInventory/index.ts`](file:///c:/Users/SEJI/YadoSync/supabase/functions/getChannexInventory/index.ts) — calls both Channex `/options` endpoints in parallel ✅ Deployed
+  - `GET /room_types/options?filter[property_id]={channex_property_id}`
+  - `GET /rate_plans/options?filter[property_id]={channex_property_id}&multi_occupancy=true`
+- [`supabase/getChannexInventory.js`](file:///c:/Users/SEJI/YadoSync/src/features/property-owner/channels/supabase/getChannexInventory.js) — frontend caller invoking the edge function ✅
+- [`useRatePlansForMapping`](file:///c:/Users/SEJI/YadoSync/src/features/property-owner/channels/hooks/useConnections.js) migrated to **TanStack Query** — accepts `{ propertyId, channexPropertyId }`, 5-min cache ✅
+- Query key `channelKeys.localInventory(propertyId)` in [`tanstack/channelKeys.js`](file:///c:/Users/SEJI/YadoSync/src/features/property-owner/channels/tanstack/channelKeys.js) ✅
+- [`ChannelMapping.jsx`](file:///c:/Users/SEJI/YadoSync/src/features/property-owner/channels/components/ChannelMapping.jsx) fully rewired to Channex UUIDs:
+  - Room type dropdown maps OTA room → Channex room type UUID ✅
+  - Rate plan dropdown filters by `room_type_id` (Channex UUID) ✅
+  - `handleSave` payload uses `channex_room_type_id` + `channex_rate_plan_id` directly from fetched rows ✅
+  - Per-room amber warning banner when Channex room type has no rate plans ✅
+  - `handleSave` guard throws before edge function call if any UUID is missing ✅
 
 ---
 
@@ -260,5 +270,6 @@ There are **two separate connect UIs** that overlap but neither is complete:
 | [`useConnections.js`](file:///c:/Users/SEJI/YadoSync/src/features/property-owner/channels/hooks/useConnections.js) | Property + connections hooks | ✅ Fetches room types & rate plans |
 | [`testChannelConnection/index.ts`](file:///c:/Users/SEJI/YadoSync/supabase/functions/testChannelConnection/index.ts) | Edge fn: test credentials | ✅ Fixed, deployed & validated |
 | [`getChannelMappingDetails/index.ts`](file:///c:/Users/SEJI/YadoSync/supabase/functions/getChannelMappingDetails/index.ts) | Edge fn: OTA rooms/rates + group_id + currency | ✅ Deployed with currency & clean normalization |
+| [`getChannexInventory/index.ts`](file:///c:/Users/SEJI/YadoSync/supabase/functions/getChannexInventory/index.ts) | Edge fn: Channex-side room_types/options + rate_plans/options (multi_occupancy) | ✅ Deployed |
 | [`createChannel/index.ts`](file:///c:/Users/SEJI/YadoSync/supabase/functions/createChannel/index.ts) | Edge fn: create + activate | ✅ Deployed with corrected payload |
 | [`disconnectChannel/`](file:///c:/Users/SEJI/YadoSync/supabase/functions/disconnectChannel/) | Edge fn: deactivate + delete | ✅ Wired with confirmation dialog |

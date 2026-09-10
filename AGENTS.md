@@ -90,6 +90,72 @@ Every feature module strictly follows this subfolder structure + `index.js` barr
 └── index.js         # Public API entry point exporting the page and public interfaces
 ```
 
+### 4. Component Co-location Rule (Sub-component Grouping)
+
+When a `components/` folder grows beyond **~5 files**, or when a set of components all serve a single parent, apply the **co-location pattern**: move the parent and all its exclusive children into a named subfolder, and expose the parent via an `index.js` barrel.
+
+**Rule:** If a component only exists to serve one parent, it lives *inside* a folder named after that parent.
+
+```
+components/
+├── TopLevelComponent.jsx          # stays flat — consumed across multiple places
+│
+├── ParentComponent/               # 📁 folder named after the parent
+│   ├── index.js                   # barrel: export { default } from './ParentComponent'
+│   ├── ParentComponent.jsx        # the parent
+│   ├── ChildHeader.jsx            # exclusive child
+│   ├── ChildFooter.jsx            # exclusive child
+│   ├── ChildEmptyState.jsx        # exclusive child
+│   └── helperUtil.js              # utility used only by this component tree
+│
+└── AnotherParent/
+    ├── index.js
+    ├── AnotherParent.jsx
+    └── AnotherChild.jsx
+```
+
+**`index.js` barrel format** — always use this exact pattern so external import paths remain unchanged:
+
+```js
+// components/ParentComponent/index.js
+export { default } from './ParentComponent';
+```
+
+This means any consumer that already does `import X from './components/ParentComponent'` continues to work without any changes — Vite/Node resolves the folder to its `index.js` automatically.
+
+**Import depth inside a subfolder:**
+- Sibling files within the same subfolder: `./SiblingComponent`
+- Feature-level hooks/utils/supabase: `../../hooks/useX`, `../../utils/helpers`
+- Global shared layer (`@/components/ui/...`): unchanged, always use the `@/` alias
+
+**Real example from this project** (`channels/components/`):
+
+```
+components/
+├── ChannelPanel.jsx               # top-level, stays flat
+│
+├── ChannelMapping/                # parent + 7 exclusive children
+│   ├── index.js
+│   ├── ChannelMapping.jsx
+│   ├── MappingHeader.jsx
+│   ├── MappingFooter.jsx
+│   ├── MappingEmptyState.jsx
+│   ├── MappingErrorState.jsx
+│   ├── MappingLoadingState.jsx
+│   ├── RoomMappingCard.jsx
+│   └── RateMappingRow.jsx
+│
+├── GeneralSettings/               # parent + platform-specific form components
+│   ├── index.js
+│   ├── GeneralSettingsTab.jsx
+│   └── BookingComGenSet.jsx
+│
+└── PlatformRow/                   # component + its own co-located utility
+    ├── index.js
+    ├── PlatformRow.jsx
+    └── timeAgo.js                 # only used here → lives here
+```
+
 ---
 
 ## Row Level Security (RLS)
@@ -156,3 +222,4 @@ Edge Functions serve as the secure bridge between YadoManagement and the Channex
 - Do not allow users to set their own role — `role` is manually assigned in the database
 - Do not suggest replacing Channex with direct OTA API integrations
 - Do not build custom UI primitives when a shadcn/ui equivalent is available
+- Do not let a `components/` folder grow flat with more than ~5 files — apply the co-location pattern (subfolder + `index.js` barrel) once a parent component has multiple exclusive children

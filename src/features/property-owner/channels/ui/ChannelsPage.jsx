@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/features/auth/context/AuthContext";
-import { AlertCircle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import {
-  useMyProperty,
-  useConnections,
-} from "../hooks/useConnections";
+import { AlertCircle, CheckCircle2, XCircle, Loader2, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useMyProperty } from "../hooks/useMyProperty";
+import { useConnections } from "../hooks/useConnections";
 import { PLATFORMS } from "../constants/PLATFORMS";
 import PlatformRow from "../components/PlatformRow";
 import { ChannelPanel } from "../components/ChannelPanel";
@@ -21,11 +20,19 @@ export default function ChannelsPage() {
   const [notification, setNotification] = useState(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const loading = propLoading || connLoading;
-  const connectedCount = connections.filter(
-    (c) => c.connection_status === "connected",
-  ).length;
+
+  const filteredPlatforms = useMemo(() => {
+    if (!searchQuery.trim()) return PLATFORMS;
+    const q = searchQuery.toLowerCase().trim();
+    return PLATFORMS.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q),
+    );
+  }, [searchQuery]);
 
   const notify = (type, message) => {
     setNotification({ type, message });
@@ -70,24 +77,9 @@ export default function ChannelsPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <p className="text-sm text-muted-foreground/70 max-w-lg">
-          Connect your OTA accounts through Channex. Once connected,
-          availability and rates are synced automatically and bookings appear in
-          your Bookings page in real time.
-        </p>
-        {!propLoading && property && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border shrink-0 bg-[#f0faf0] border-[#97C459] text-[#27500A] dark:bg-green-900/30 dark:border-green-700/50 dark:text-green-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-            Channex connected
-          </div>
-        )}
-      </div>
-
       {/* OTA Platforms */}
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/20 flex items-start justify-between gap-4">
+      <div className="glass-card rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-7rem)] sm:h-[calc(100vh-8rem)]">
+        <div className="px-5 py-4 border-b border-white/20 flex items-center justify-between gap-4 shrink-0">
           <div>
             <h3 className="text-sm font-semibold text-foreground/85">
               OTA Platforms
@@ -96,27 +88,45 @@ export default function ChannelsPage() {
               Connect the platforms where your property is listed.
             </p>
           </div>
-          {!loading && property && (
-            <span className="text-xs text-muted-foreground/50 shrink-0 mt-0.5">
-              {connectedCount} / {PLATFORMS.filter((p) => p.supported).length}{" "}
-              connected
-            </span>
-          )}
+          <div className="relative shrink-0 w-48 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+            <Input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search channels..."
+              className="h-8 pl-9 pr-8 text-xs glass-filter-btn rounded-xl border-0 placeholder:text-muted-foreground/40 w-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex-1 flex items-center justify-center py-16">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/40" />
           </div>
         ) : !property ? (
-          <div className="flex items-center gap-2 px-5 py-10 text-sm text-muted-foreground/60">
+          <div className="flex-1 flex items-center gap-2 px-5 py-10 text-sm text-muted-foreground/60">
             <AlertCircle className="w-4 h-4 shrink-0" />
             No property found. Please add a property in Settings before managing
             connections.
           </div>
+        ) : filteredPlatforms.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-sm text-muted-foreground/60">
+            No channels found matching &ldquo;{searchQuery}&rdquo;
+          </div>
         ) : (
-          <div className="p-4 flex flex-col gap-1.5">
-            {PLATFORMS.map((p) => (
+          <div className="p-4 flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+            {filteredPlatforms.map((p) => (
               <PlatformRow
                 key={p.id}
                 platform={p}
@@ -143,4 +153,3 @@ export default function ChannelsPage() {
     </>
   );
 }
-

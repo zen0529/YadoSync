@@ -91,9 +91,14 @@ export const createChannelConnection = async ({
  * @param {string} params.propertyId
  * @param {string} params.channel
  */
-export const disconnectChannelConnection = async ({ propertyId, channel }) => {
+export const disconnectChannelConnection = async ({ propertyId, channel, platform }) => {
+  const resolvedChannel = channel || platform;
   const { data, error } = await supabase.functions.invoke("disconnectChannel", {
-    body: { property_id: propertyId, channel },
+    body: {
+      property_id: propertyId,
+      channel: resolvedChannel,
+      platform: resolvedChannel,
+    },
   });
   if (error) throw new Error(await parseEdgeFunctionError(error));
   if (data?.error) throw new Error(data.error);

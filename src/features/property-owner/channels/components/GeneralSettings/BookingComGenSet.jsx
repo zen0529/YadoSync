@@ -1,15 +1,23 @@
 import { useState } from "react";
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { handleTest } from "../utils";
+import { handleTest } from "../../utils";
 
 const CHANNEL_ID = "BookingCom";
 
 // ── Booking.com General Settings ───────────────────────────────────────────────
-const BookingComGenSet = ({ channel, platform, onSuccess, onClose }) => {
-  const [hotelId, setHotelId] = useState("");
+const BookingComGenSet = ({
+  channel,
+  platform,
+  property,
+  hotelId = "",
+  onHotelIdChange,
+  isTested = false,
+  setIsTested,
+  onSuccess,
+  onClose,
+}) => {
   const [testing, setTesting] = useState(false);
-  const [tested, setTested] = useState(false);
   const [error, setError] = useState(null);
 
   const onTest = () =>
@@ -18,7 +26,9 @@ const BookingComGenSet = ({ channel, platform, onSuccess, onClose }) => {
       channelId: CHANNEL_ID,
       setTesting,
       setError,
-      setTested,
+      setTested: (status) => {
+        setIsTested?.(status);
+      },
     });
 
   return (
@@ -39,8 +49,7 @@ const BookingComGenSet = ({ channel, platform, onSuccess, onClose }) => {
                 type="text"
                 value={hotelId}
                 onChange={(e) => {
-                  setHotelId(e.target.value);
-                  setTested(false);
+                  onHotelIdChange?.(e.target.value);
                   setError(null);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && onTest()}
@@ -57,7 +66,7 @@ const BookingComGenSet = ({ channel, platform, onSuccess, onClose }) => {
                 type="button"
                 variant=""
                 onClick={onTest}
-                disabled={!hotelId.trim() || testing}
+                disabled={!hotelId?.trim() || testing}
                 className="h-9 text-xs text-black/60 dark:text-black/50 hover:cursor-pointer bg-white font-medium hover:bg-gray-100 min-w-[120px]"
               >
                 {testing ? (
@@ -68,7 +77,7 @@ const BookingComGenSet = ({ channel, platform, onSuccess, onClose }) => {
               </Button>
             </div>
 
-            {tested && (
+            {isTested && (
               <div className="flex items-center justify-end gap-2 text-xs text-green-600 dark:text-green-400">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 Connection successful — credentials verified
@@ -88,7 +97,7 @@ const BookingComGenSet = ({ channel, platform, onSuccess, onClose }) => {
       <div className="shrink-0 pt-4 border-t border-white/10">
         <Button
           className="w-full h-10 text-sm bg-green-500/90 hover:bg-green-600 text-white shadow-sm shadow-green-500/20 transition-all"
-          disabled={!tested}
+          disabled={!isTested}
           onClick={() =>
             onSuccess?.({
               hotelId: hotelId.trim(),

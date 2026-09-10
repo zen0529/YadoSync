@@ -1,24 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getMyProperty, getConnections } from "../supabase";
-import { getRatePlansByProperty } from "@/features/property-owner/roomAndRates/supabase/getRatePlans";
-import { getRoomTypesByProperty } from "@/features/property-owner/roomAndRates/supabase/getRoomTypes";
-
-/** Fetch the current user's property (id + channex_property_id) */
-export const useMyProperty = (userId) => {
-  const [property, setProperty] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-    setLoading(true);
-    getMyProperty(userId)
-      .then(setProperty)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [userId]);
-
-  return { property, loading };
-};
+import { getConnections } from "../supabase";
 
 /** Fetch all platform connections for a property, with a refetch callback */
 export const useConnections = (propertyId) => {
@@ -44,27 +25,3 @@ export const useConnections = (propertyId) => {
 
   return { connections, loading, refetch };
 };
-
-export const useRatePlansForMapping = (propertyId) => {
-  const [roomTypes, setRoomTypes] = useState([]);
-  const [ratePlans, setRatePlans] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!propertyId) return;
-    setLoading(true);
-    Promise.all([
-      getRoomTypesByProperty(propertyId),
-      getRatePlansByProperty(propertyId),
-    ])
-      .then(([rt, rp]) => {
-        setRoomTypes(rt || []);
-        setRatePlans(rp || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [propertyId]);
-
-  return { roomTypes, ratePlans, loading };
-};
-
