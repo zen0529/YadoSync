@@ -9,7 +9,7 @@ import {
 } from "../_shared/channex.ts";
 
 const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL");
-const PUSH_DAYS = 365;
+const PUSH_DAYS = 500;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -175,7 +175,7 @@ serve(async (req) => {
         throw new Error(`Supabase insert failed: ${supabaseError.message}`);
 
       // ── 3. Initial restrictions push (fire-and-forget) ─────────────────
-      // Push rate=0 for the next 365 days so the rate plan registers on
+      // Push rate=0 for the next 500 days so the rate plan registers on
       // Channex and OTAs see a valid (if zero) price slot. The property owner
       // sets real prices via the ARI editor. Failure is non-fatal.
       try {

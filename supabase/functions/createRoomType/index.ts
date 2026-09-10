@@ -9,7 +9,7 @@ import {
 } from "../_shared/channex.ts";
 
 const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL");
-const PUSH_DAYS = 365;
+const PUSH_DAYS = 500;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +123,7 @@ serve(async (req) => {
       }
 
       // ── 3. Initial availability push (fire-and-forget) ──────────────────
-      // Push count_of_rooms for the next 365 days so the room type is visible
+      // Push count_of_rooms for the next 500 days so the room type is visible
       // on OTAs immediately. Failure is non-fatal — the room type record is
       // valid; the hourly fullSyncARI cron will correct any missed push.
       try {

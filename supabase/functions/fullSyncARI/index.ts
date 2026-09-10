@@ -31,7 +31,7 @@ import {
 } from "../_shared/channex.ts";
 
 const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL");
-const PUSH_DAYS = 365;
+const PUSH_DAYS = 500;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -192,7 +192,7 @@ serve(async (req) => {
               closed_to_departure: r.closed_to_departure ?? false,
             }));
           } else {
-            // No stored restrictions — push rate=0 for next 365 days as a safe default
+            // No stored restrictions — push rate=0 for next 500 days as a safe default
             const dates = dateRange(today, PUSH_DAYS);
             entries = dates.map((d) => ({
               date: d,
