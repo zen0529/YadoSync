@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ImportOtaModal } from "../components/ImportOtaModal";
-import { BedDouble, Download, Loader2, CalendarDays } from "lucide-react";
+import { BedDouble, Download, CalendarDays } from "lucide-react";
 import { useInventory } from "../hooks/useInventory";
 import { RoomTypesTab } from "../components/RoomTypesTab";
 import { ARIEditorPanel } from "../components/ARIEditorPanel";
@@ -87,14 +87,7 @@ export const RoomAndRatesPage = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto custom-scrollbar pb-6">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-2">
-            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-            <span className="text-sm text-muted-foreground">
-              Loading inventory...
-            </span>
-          </div>
-        ) : !property ? (
+        {!loading && !property ? (
           <div className="glass-card rounded-2xl flex flex-col items-center justify-center py-20 px-6 mt-4">
             <div className="w-14 h-14 rounded-full bg-green-100/60 flex items-center justify-center mb-4">
               <BedDouble className="w-7 h-7 text-green-500/50" />
@@ -106,7 +99,7 @@ export const RoomAndRatesPage = () => {
               You need a property set up before managing room types.
             </p>
           </div>
-        ) : (
+        ) : property ? (
           <RoomTypesTab
             propertyId={property.id}
             channexPropertyId={property.channex_property_id}
@@ -115,7 +108,7 @@ export const RoomAndRatesPage = () => {
             onRoomTypesLoaded={setAriRoomTypes}
             onRatePlansLoaded={setAriRatePlans}
           />
-        )}
+        ) : null}
       </div>
 
       <ImportOtaModal
