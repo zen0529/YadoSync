@@ -45,7 +45,7 @@ export const BookingDetailModal = ({ booking, roomName, open, onOpenChange }) =>
           {/* Room & Property */}
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400 flex items-center justify-center">
                 <BedDouble className="w-4 h-4" />
               </div>
               <div>

@@ -88,7 +88,7 @@ export const TapeChartToolbar = ({
             size="sm"
             onClick={() => setIsChannelsOpen((prev) => !prev)}
             className={`h-8 px-3 hover:cursor-pointer rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-xs gap-1.5 transition-colors ${
-              isChannelsOpen ? "border-green-500 ring-1 ring-blue-500/20" : ""
+              isChannelsOpen ? "border-green-500 ring-1 ring-green-500/20" : ""
             }`}
           >
             <Filter className="w-3.5 h-3.5 text-slate-500" />

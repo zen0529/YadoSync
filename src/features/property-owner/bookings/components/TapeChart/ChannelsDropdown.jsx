@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Search, Phone, ClipboardList, Check, X, Minus, Clock } from "lucide-react";
+import {
+  Search,
+  Phone,
+  ClipboardList,
+  Check,
+  X,
+  Minus,
+  Clock,
+} from "lucide-react";
 
 // Brand icons matching the reference image
 export const ChannelBrandIcon = ({ type }) => {
@@ -14,7 +22,7 @@ export const ChannelBrandIcon = ({ type }) => {
       return (
         <span className="w-4 h-4 rounded-md bg-[#FF5A5F] text-white flex items-center justify-center shrink-0 p-0.5">
           <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-            <path d="M12 2C9.5 2 7.7 3.8 7.7 6.3c0 2.2 1.3 4.2 3.1 5.2-.4.7-.8 1.4-1.2 2.2-1.8 3.5-3.6 7-3.6 8.3 0 1.1.9 2 2 2 1.3 0 2.6-1.1 4-3 1.4 1.9 2.7 3 4 3 1.1 0 2-.9 2-2 0-1.3-1.8-4.8-3.6-8.3-.4-.8-.8-1.5-1.2-2.2 1.8-1 3.1-3 3.1-5.2C16.3 3.8 14.5 2 12 2zm0 3c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
+            <path d="M12 2C9.5 2 7.7 3.8 7.7 6.3c0 2.2 1.3 4.2 3.1 5.2-.4.7-.8 1.4-1.2 2.2-1.8 3.5-3.6 7-3.6 8.3 0 1.1.9 2 2 2 1.3 0 2.6-1.1 4-3 1.4 1.9 2.7 3 4 3 1.1 0 2-.9 2-2 0-1.3-1.8-4.8-3.6-8.3-.4-.8-.8-1.5-1.2-2.2 1.8-1 3.1-3 3.1-5.2C16.3 3.8 14.5 2 12 2zm0 3c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
           </svg>
         </span>
       );
@@ -142,6 +150,18 @@ const STATUS_OPTIONS = [
   { id: "blocked", label: "Blocked", icon: "status-blocked" },
 ];
 
+const CheckboxBox = ({ checked }) => (
+  <div
+    className={`w-4 h-4 rounded border transition-colors flex items-center justify-center shrink-0 ${
+      checked
+        ? "bg-green-600 border-green-600 text-white shadow-xs"
+        : "bg-slate-100 hover:bg-slate-200/80 border-slate-300"
+    }`}
+  >
+    {checked && <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />}
+  </div>
+);
+
 export const ChannelsDropdown = ({
   open,
   onClose,
@@ -169,7 +189,7 @@ export const ChannelsDropdown = ({
   });
 
   const [checkedStatuses, setCheckedStatuses] = useState(
-    () => new Set(allStatusIds)
+    () => new Set(allStatusIds),
   );
 
   // Close when clicking outside
@@ -187,7 +207,7 @@ export const ChannelsDropdown = ({
   }, [open, onClose]);
 
   const allChannelsSelected = allChannelIds.every((id) =>
-    checkedChannels.has(id)
+    checkedChannels.has(id),
   );
 
   const toggleAll = () => {
@@ -241,16 +261,16 @@ export const ChannelsDropdown = ({
   // Filter lists by search query
   const query = search.toLowerCase().trim();
   const visibleInitialOtas = INITIAL_OTAS.filter((o) =>
-    o.label.toLowerCase().includes(query)
+    o.label.toLowerCase().includes(query),
   );
   const visibleExtraOtas = EXTRA_OTAS.filter((o) =>
-    o.label.toLowerCase().includes(query)
+    o.label.toLowerCase().includes(query),
   );
   const visibleOtherSources = OTHER_SOURCES.filter((s) =>
-    s.label.toLowerCase().includes(query)
+    s.label.toLowerCase().includes(query),
   );
   const visibleStatuses = STATUS_OPTIONS.filter((s) =>
-    s.label.toLowerCase().includes(query)
+    s.label.toLowerCase().includes(query),
   );
 
   const otasToDisplay = showMore
@@ -275,7 +295,7 @@ export const ChannelsDropdown = ({
           placeholder="Search channels..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 outline-none placeholder:text-slate-400 text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
+          className="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 outline-none placeholder:text-slate-400 text-slate-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20"
         />
       </div>
 
@@ -287,8 +307,9 @@ export const ChannelsDropdown = ({
             type="checkbox"
             checked={allChannelsSelected}
             onChange={toggleAll}
-            className="w-4 h-4 rounded text-blue-600 bg-slate-100 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+            className="sr-only"
           />
+          <CheckboxBox checked={allChannelsSelected} />
           <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
             All channels
           </span>
@@ -309,8 +330,9 @@ export const ChannelsDropdown = ({
                   type="checkbox"
                   checked={checkedChannels.has(ota.id)}
                   onChange={() => toggleChannel(ota.id)}
-                  className="w-4 h-4 rounded text-blue-600 bg-slate-100 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                  className="sr-only"
                 />
+                <CheckboxBox checked={checkedChannels.has(ota.id)} />
                 <ChannelBrandIcon type={ota.icon} />
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
                   {ota.label}
@@ -325,7 +347,7 @@ export const ChannelsDropdown = ({
               <button
                 type="button"
                 onClick={() => setShowMore((prev) => !prev)}
-                className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+                className="text-green-600 dark:text-green-400 font-semibold hover:underline cursor-pointer"
               >
                 {showMore ? "- Show less" : "+ 13 more"}
               </button>{" "}
@@ -349,8 +371,9 @@ export const ChannelsDropdown = ({
                   type="checkbox"
                   checked={checkedChannels.has(source.id)}
                   onChange={() => toggleChannel(source.id)}
-                  className="w-4 h-4 rounded text-blue-600 bg-slate-100 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                  className="sr-only"
                 />
+                <CheckboxBox checked={checkedChannels.has(source.id)} />
                 <ChannelBrandIcon type={source.icon} />
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
                   {source.label}
@@ -375,8 +398,9 @@ export const ChannelsDropdown = ({
                   type="checkbox"
                   checked={checkedStatuses.has(st.id)}
                   onChange={() => toggleStatus(st.id)}
-                  className="w-4 h-4 rounded text-blue-600 bg-slate-100 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                  className="sr-only"
                 />
+                <CheckboxBox checked={checkedStatuses.has(st.id)} />
                 <ChannelBrandIcon type={st.icon} />
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
                   {st.label}
@@ -400,7 +424,7 @@ export const ChannelsDropdown = ({
         <button
           type="button"
           onClick={handleApply}
-          className="px-5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors"
+          className="px-5 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 hover:cursor-pointer text-white text-xs font-semibold shadow-xs transition-colors"
         >
           Apply
         </button>

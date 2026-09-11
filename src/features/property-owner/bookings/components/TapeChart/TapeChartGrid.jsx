@@ -134,7 +134,7 @@ export const TapeChartGrid = ({
                   placeholder="Search rooms..."
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-8 pr-2.5 py-1.5 outline-none placeholder:text-slate-400 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 text-slate-800 dark:text-slate-200"
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-8 pr-2.5 py-1.5 outline-none placeholder:text-slate-400 focus:border-green-500/50 focus:ring-1 focus:ring-green-500/20 text-slate-800 dark:text-slate-200"
                 />
               </div>
             </div>
