@@ -1,157 +1,74 @@
 /**
  * _shared/bookings.ts
  *
- * Shared booking-ingestion logic used by both pollBookingFeed and
- * channex-webhook. Both functions call applyRevision() identically —
- * the only difference is where the revision comes from.
+ * Revision failure tracking helpers: upsertRevisionFailure and markRevisionResolved.
+ * These are used by pollBookingFeed after applyRevision returns ok: false.
  *
- * apply logic:
- *   new          → upsert into bookings (idempotent on channex_booking_id)
- *   cancellation → set status = 'cancelled'
- *   modified     → set status = 'modified_pending', store raw payload + notes
- *                  (human review required — do NOT auto-apply date/rate changes)
- *
- * ACK is the caller's responsibility. This file only applies to Supabase.
- * The caller must ack AFTER a successful apply and NOT ack on error.
+ * apply logic lives in _shared/bookingsPage/applyRevision.ts.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import type { BookingRevision } from "./channex.ts";
+import type { ErrorKind } from "./bookingsPage/classifyError.ts";
 
-export type ApplyResult =
-  | { ok: true }
-  | { ok: false; reason: string };
+// ── Revision failure tracking ─────────────────────────────────────────────────
 
 /**
- * Apply a single Channex booking revision to the Supabase `bookings` table.
+ * Upsert a failure record for a revision that could not be applied.
  *
- * @param revision   The revision object from the feed or a single-revision GET
- * @param supabase   A Supabase client with service role (bypasses RLS)
- * @returns          { ok: true } on success, { ok: false, reason } on failure
+ * Uses a single Postgres function (`upsert_revision_failure`) that does an
+ * atomic INSERT ... ON CONFLICT DO UPDATE so attempt_count is incremented
+ * safely without a read-modify-write race.
+ *
+ * Returns the row so the caller can check first_failed_at against the
+ * 30-minute Channex feed expiry window.
+ *
+ * The backing SQL function is defined in:
+ *   supabase/migrations/20260916_revision_failures.sql
  */
-export async function applyRevision(
-  revision: BookingRevision,
+export async function upsertRevisionFailure(
   supabase: ReturnType<typeof createClient>,
-): Promise<ApplyResult> {
-  const attr = revision.attributes;
-  const status = attr.status;  // "new" | "modified" | "cancellation"
-
-  // ── Map Channex customer → YadoSync guest fields ─────────────────────────
-  const guestName = [attr.customer?.name, attr.customer?.surname]
-    .filter(Boolean)
-    .join(" ") || null;
-
-  // First room in the booking (YadoSync currently stores one room per booking)
-  const firstRoom = attr.rooms?.[0];
-
-  // ── Build the row we'll upsert / update ──────────────────────────────────
+  revisionId: string,
+  bookingId: string | null,
+  reason: string,
+  kind: ErrorKind,
+): Promise<{ first_failed_at: string }> {
   const now = new Date().toISOString();
 
-  try {
-    if (status === "new") {
-      // ── New booking: upsert (idempotent on channex_booking_id) ────────────
-      const row = {
-        // Use booking_id as the dedup key (stable across revisions)
-        channex_booking_id:   attr.booking_id,
-        channex_revision_id:  attr.id,
-        property_id:          attr.property_id,
-        ota_name:             attr.ota_name      || null,
-        ota_reservation_code: attr.ota_reservation_code || null,
-        status:               "confirmed",
-        guest_name:           guestName,
-        guest_email:          attr.customer?.mail  || null,
-        guest_phone:          attr.customer?.phone || null,
-        room_type_id:         firstRoom?.room_type_id || null,
-        check_in:             attr.arrival_date,
-        check_out:            attr.departure_date,
-        amount:               attr.amount ? parseFloat(attr.amount) : null,
-        currency:             attr.currency || "USD",
-        raw_payload:          revision as unknown as Record<string, unknown>,
-        booked_at:            attr.inserted_at || now,
-        updated_at:           now,
-      };
+  const { data, error } = await supabase.rpc("upsert_revision_failure", {
+    p_revision_id:  revisionId,
+    p_booking_id:   bookingId,
+    p_last_error:   reason,
+    p_error_kind:   kind,
+    p_tried_at:     now,
+  });
 
-      const { error } = await supabase
-        .from("bookings")
-        .upsert(row, { onConflict: "channex_booking_id" });
-
-      if (error) {
-        return { ok: false, reason: `Supabase upsert failed: ${error.message}` };
-      }
-
-      console.log(`[bookings] Applied new booking ${attr.booking_id} (${attr.ota_name})`);
-      return { ok: true };
-
-    } else if (status === "cancellation") {
-      // ── Cancellation: mark the existing booking as cancelled ──────────────
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          status:              "cancelled",
-          channex_revision_id: attr.id,
-          raw_payload:         revision as unknown as Record<string, unknown>,
-          updated_at:          now,
-        })
-        .eq("channex_booking_id", attr.booking_id);
-
-      if (error) {
-        return { ok: false, reason: `Supabase cancel update failed: ${error.message}` };
-      }
-
-      console.log(`[bookings] Cancelled booking ${attr.booking_id}`);
-      return { ok: true };
-
-    } else if (status === "modified") {
-      // ── Modification: flag for human review — do NOT auto-apply ──────────
-      // Store the new raw payload and a human-readable note describing what
-      // changed. The property owner must review and confirm in the UI.
-      const notes = buildModificationNote(attr);
-
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          status:              "modified_pending",
-          channex_revision_id: attr.id,
-          raw_payload:         revision as unknown as Record<string, unknown>,
-          notes,
-          updated_at:          now,
-        })
-        .eq("channex_booking_id", attr.booking_id);
-
-      if (error) {
-        return { ok: false, reason: `Supabase modification update failed: ${error.message}` };
-      }
-
-      console.log(`[bookings] Flagged modified booking ${attr.booking_id} for review`);
-      return { ok: true };
-
-    } else {
-      // Unknown status — ack to drain the feed but log a warning
-      console.warn(`[bookings] Unknown revision status "${status}" for booking ${attr.booking_id} — acking to drain`);
-      return { ok: true };
-    }
-  } catch (err: any) {
-    return { ok: false, reason: err?.message ?? "Unknown error in applyRevision" };
+  if (error || !data) {
+    // Failure tracking itself failed — log but don't throw; the original apply
+    // failure is what matters. Return a safe fallback so the caller can still
+    // check the 30-minute window (worst case we use now, which is conservative).
+    console.error("[bookings] Failed to upsert revision_failure record:", error?.message);
+    return { first_failed_at: now };
   }
+
+  return { first_failed_at: data.first_failed_at };
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 /**
- * Build a short human-readable note for a modified booking so the
- * property owner knows what changed without reading raw JSON.
+ * Mark a revision failure as resolved after a successful apply.
+ * Called by pollBookingFeed immediately after applyRevision returns ok: true.
  */
-function buildModificationNote(attr: BookingRevision["attributes"]): string {
-  const lines: string[] = [
-    `Modification received from ${attr.ota_name ?? "OTA"} at ${new Date().toISOString()}.`,
-    `New dates: ${attr.arrival_date} → ${attr.departure_date}`,
-    `New amount: ${attr.amount} ${attr.currency}`,
-  ];
+export async function markRevisionResolved(
+  supabase: ReturnType<typeof createClient>,
+  revisionId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("revision_failures")
+    .update({ resolved: true, resolved_at: new Date().toISOString() })
+    .eq("revision_id", revisionId)
+    .eq("resolved", false);
 
-  if (attr.notes) {
-    lines.push(`Guest notes: ${attr.notes}`);
+  if (error) {
+    // Non-fatal — the booking was saved successfully. Just log.
+    console.error(`[bookings] Failed to mark revision ${revisionId} as resolved:`, error.message);
   }
-
-  lines.push("Review and confirm changes manually.");
-  return lines.join("\n");
 }

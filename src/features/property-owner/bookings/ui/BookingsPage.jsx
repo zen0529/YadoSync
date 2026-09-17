@@ -32,12 +32,12 @@ export const BookingsPage = () => {
 
   // Bookings that need attention
   const pendingModCount = bookings.filter(
-    (b) => b.status === "modified_pending",
+    (b) => b.status === "modified",
   ).length;
 
   return (
     <div className="flex flex-col h-[calc(100vh-6.5rem)]">
-      {/* Modified-pending alert banner */}
+      {/* Modified booking alert banner */}
       {pendingModCount > 0 && (
         <div className="glass-card rounded-xl px-4 py-3 text-xs flex justify-between items-center mb-4 border-amber-200/50 shrink-0">
           <div className="flex items-center gap-2 text-amber-700">

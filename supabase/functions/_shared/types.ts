@@ -101,9 +101,11 @@ export interface BookingRevision {
 }
 
 export interface BookingRevisionFeedMeta {
-  total: number;
-  limit: number;
-  page:  number;
+  total:           number;
+  limit:           number;
+  page:            number;
+  order_by:        string; // e.g. "inserted_at"
+  order_direction: string; // e.g. "asc"
 }
 
 export interface BookingRevisionFeed {

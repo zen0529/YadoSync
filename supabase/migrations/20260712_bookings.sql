@@ -20,12 +20,12 @@ CREATE TABLE IF NOT EXISTS bookings (
   ota_name              text,                          -- "Booking.com", "Airbnb", etc.
   ota_reservation_code  text,                          -- OTA's own ref code (for staff)
 
-  -- Booking status
-  -- confirmed       → active booking
-  -- cancelled       → OTA cancelled the booking
-  -- modified_pending → modification received, needs human review
-  status                text        NOT NULL DEFAULT 'confirmed'
-                        CHECK (status IN ('confirmed', 'cancelled', 'modified_pending')),
+  -- Booking status — mirrors Channex revision status naming exactly
+  -- new          → active booking (received from a 'new' revision)
+  -- modified     → modification received from OTA, needs human review
+  -- cancellation → OTA cancelled the booking
+  status                text        NOT NULL DEFAULT 'new'
+                        CHECK (status IN ('new', 'modified', 'cancellation')),
 
   -- Guest info
   guest_name            text,

@@ -4,6 +4,9 @@
  * GET from Channex returning both `data` and `meta` envelopes,
  * with exponential backoff and retry logic.
  * Retry policy lives in retryBackoff.ts (single responsibility).
+ *
+ * Pass `options.maxAttempts = 1` to disable retries entirely (e.g. for
+ * cron-driven callers that already have a built-in retry via re-invocation).
  */
 
 import { RETRYABLE_STATUSES, MAX_ATTEMPTS, backoff } from "./retryBackoff.ts";
@@ -20,10 +23,12 @@ export async function channexGetWithMeta(
   path: string,
   apiKey: string,
   baseUrl: string,
+  options?: { maxAttempts?: number },
 ): Promise<{ data: unknown; meta: unknown }> {
+  const maxAttempts = options?.maxAttempts ?? MAX_ATTEMPTS;
   let lastError: Error | undefined;
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) await backoff(attempt - 1);
 
     let res: Response;
@@ -47,8 +52,8 @@ export async function channexGetWithMeta(
     lastError = new Error(errBody?.errors?.title || `Channex GET ${path} failed (${res.status})`);
 
     if (!RETRYABLE_STATUSES.has(res.status)) break;
-    console.warn(`[channex] GET ${path} got ${res.status} (attempt ${attempt + 1}/${MAX_ATTEMPTS})`);
+    console.warn(`[channex] GET ${path} got ${res.status} (attempt ${attempt + 1}/${maxAttempts})`);
   }
 
-  throw lastError ?? new Error(`Channex GET ${path} failed after ${MAX_ATTEMPTS} attempts`);
+  throw lastError ?? new Error(`Channex GET ${path} failed after ${maxAttempts} attempts`);
 }

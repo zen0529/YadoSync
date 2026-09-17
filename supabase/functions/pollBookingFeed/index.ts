@@ -30,7 +30,8 @@ import {
   type BookingRevisionFeed,
   type BookingRevisionFeedMeta,
 } from "../_shared/channex.ts";
-import { applyRevision } from "../_shared/bookings.ts";
+import { applyRevision } from "../_shared/bookingsPage/applyRevision.ts";
+import { upsertRevisionFailure, markRevisionResolved } from "../_shared/bookings.ts";
 
 const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL") ?? "https://staging.channex.io";
 
@@ -46,9 +47,13 @@ serve(async (req) => {
   }
 
   const errors: string[] = [];
-  let applied = 0;
-  let failed = 0;
-  let acked = 0;
+  let applied   = 0;
+  let failed    = 0;
+  let permanent = 0;   // failures that need human intervention
+  let acked     = 0;
+
+  /** 30-minute Channex feed expiry window in milliseconds */
+  const THIRTY_MINUTES_MS = 30 * 60 * 1_000;
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -75,6 +80,7 @@ serve(async (req) => {
         `/booking_revisions/feed?page=${page}`,
         channexApiKey,
         CHANNEX_BASE_URL,
+        { maxAttempts: 1 }, // cron retries naturally every minute — no in-function backoff needed
       ) as { data: BookingRevision[]; meta: BookingRevisionFeedMeta };
 
       const revisions = data ?? [];
@@ -95,7 +101,10 @@ serve(async (req) => {
         const result = await applyRevision(revision, supabase);
 
         if (result.ok) {
-          // Ack ONLY after a successful apply
+          // ── Success: ack + mark any prior failure record as resolved ─────
+          // markRevisionResolved is a no-op when no failure record exists.
+          await markRevisionResolved(supabase, revId);
+
           try {
             await channexPostRaw(
               `/booking_revisions/${revId}/ack`,
@@ -112,10 +121,42 @@ serve(async (req) => {
             applied++;
           }
         } else {
-          // Apply failed — leave un-acked so it re-surfaces
+          // ── Failure: record it and route by kind ─────────────────────────
+          const { first_failed_at } = await upsertRevisionFailure(
+            supabase,
+            revId,
+            revision.attributes?.booking_id ?? null,
+            result.reason,
+            result.kind,
+          );
+
+          const ageMs = Date.now() - new Date(first_failed_at).getTime();
+          const windowExpired = ageMs > THIRTY_MINUTES_MS;
+
+          if (result.kind === "permanent" || windowExpired) {
+            // Permanent error OR the revision has been retrying for > 30 min
+            // and has likely fallen out of the Channex feed.
+            // Alert loudly — a human must intervene.
+            permanent++;
+            const alertReason = windowExpired
+              ? `30-min window expired after ${Math.round(ageMs / 60_000)} min: ${result.reason}`
+              : result.reason;
+            console.error(
+              `[pollBookingFeed] PERMANENT failure for revision ${revId} (booking ${revision.attributes?.booking_id}):`,
+              alertReason,
+            );
+            errors.push(`[PERMANENT] Revision ${revId}: ${alertReason}`);
+            // TODO Phase 2: write to sync_logs + trigger superadmin alert
+          } else {
+            // Transient error within the 30-min window — leave un-acked.
+            // The revision will re-surface on the next poll cycle (every 1 min).
+            console.warn(
+              `[pollBookingFeed] Transient failure for revision ${revId}, will retry. Reason: ${result.reason}`,
+            );
+            errors.push(`[TRANSIENT] Revision ${revId}: ${result.reason}`);
+          }
+
           failed++;
-          errors.push(`Revision ${revId}: ${result.reason}`);
-          console.error(`[pollBookingFeed] Apply failed for revision ${revId}:`, result.reason);
         }
 
         totalDrained++;
@@ -129,11 +170,11 @@ serve(async (req) => {
     }
 
     console.log(
-      `[pollBookingFeed] source=${source} applied=${applied} failed=${failed} acked=${acked} errors=${errors.length}`,
+      `[pollBookingFeed] source=${source} applied=${applied} failed=${failed} permanent=${permanent} acked=${acked} errors=${errors.length}`,
     );
 
     return new Response(
-      JSON.stringify({ applied, failed, acked, errors, source }),
+      JSON.stringify({ applied, failed, permanent, acked, errors, source }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
