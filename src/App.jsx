@@ -17,6 +17,7 @@ import ChannelsPage from "@/features/property-owner/channels/ui/ChannelsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { AdminOverviewPage } from "@/features/superadmin/overview/page/AdminOverviewPage";
 import { AdminPropertiesPage } from "@/features/superadmin/properties";
+import { AdminCommissionsPage } from "@/features/superadmin/commissions";
 import { BillingPage } from "@/features/superadmin/billing/ui/BillingPage";
 import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage.jsx";
 import LandingPage from "@/features/landingPage/LandingPage";
@@ -110,6 +111,7 @@ export default function App() {
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<AdminOverviewPage />} />
             <Route path="properties" element={<AdminPropertiesPage />} />
+            <Route path="commissions" element={<AdminCommissionsPage />} />
             <Route path="billing" element={<BillingPage />} />
             <Route path="logs" element={<SystemLogsPage />} />
             <Route path="settings" element={<SettingsPage />} />

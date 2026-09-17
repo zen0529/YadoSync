@@ -22,11 +22,13 @@ import {
   Moon,
   Sun,
   Activity,
+  Percent,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "overview",    label: "Overview",          icon: LayoutGrid },
   { id: "properties",  label: "Properties",        icon: Building2 },
+  { id: "commissions", label: "Commissions",       icon: Percent },
   { id: "billing",     label: "Billing & Revenue", icon: Coins },
   { id: "logs",        label: "System Logs",       icon: Activity },
 ];

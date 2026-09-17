@@ -1,6 +1,7 @@
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { MetricCard } from "@/features/property-owner/components/MetricCard";
-import { EARNINGS_PER_BOOKING, MOCK_REVENUE_DATA, MOCK_PLATFORM_DATA } from "@/data/constants";
+import { MOCK_REVENUE_DATA, MOCK_PLATFORM_DATA } from "@/data/constants";
+import { useCommissionLedger } from "../hooks/useCommissionLedger";
 import { User, Building2, Globe, Coins, Download, ArrowUpRight } from "lucide-react";
 import {
   AreaChart,
@@ -37,6 +38,18 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export const AnalyticsPage = () => {
+  const {
+    data: ledgerRows = [],
+    isLoading: ledgerLoading,
+    isError: ledgerError,
+  } = useCommissionLedger();
+
+  // Derive total commission from live rows
+  const totalCommission = ledgerRows.reduce(
+    (sum, row) => sum + (row.commission_amount ?? 0),
+    0,
+  );
+
   return (
     <div className="flex flex-col gap-5 pb-6">
       
@@ -57,14 +70,19 @@ export const AnalyticsPage = () => {
         <MetricCard label="Total Gross Revenue" value="₱202,000" trend="+12% vs Last Week" sparkKey="earnings" />
         <MetricCard label="Average Daily Rate" value="₱6,400" trend="Across all properties" sparkKey="earnings" />
         
-        {/* Commission Cap Card */}
+        {/* Commission Total Card */}
         <div className="glass-card rounded-2xl p-5 group hover:bg-white/50 transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5 relative overflow-hidden">
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-green-500/20 blur-2xl rounded-full group-hover:bg-green-500/30 transition-all duration-500 pointer-events-none" />
           
           <div className="flex flex-row justify-between items-center relative z-10">
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold leading-none tracking-tight text-foreground/90">₱18.4k</span>
-              <span className="text-xs text-muted-foreground/80 font-medium">/ ₱50k</span>
+              {ledgerLoading ? (
+                <span className="text-2xl font-bold text-foreground/40 animate-pulse">Loading…</span>
+              ) : (
+                <span className="text-3xl font-bold leading-none tracking-tight text-foreground/90">
+                  ₱{totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              )}
             </div>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/20 transition-transform duration-300 group-hover:scale-110">
               <Coins className="w-5 h-5 text-white" />
@@ -72,18 +90,12 @@ export const AnalyticsPage = () => {
           </div>
 
           <p className="text-xs text-muted-foreground/70 font-medium mt-1 relative z-10">
-            YadoSync Fee Cap
+            Total Commission Earned
           </p>
 
-          <div className="mt-2.5 relative z-10">
-            <div className="flex justify-between text-[11px] font-semibold mb-1">
-              <span className="text-green-600/80">36% to Cap</span>
-              <span className="text-muted-foreground/70">0% fee after!</span>
-            </div>
-            <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full" style={{ width: "36%" }} />
-            </div>
-          </div>
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5 relative z-10">
+            {ledgerRows.length} booking{ledgerRows.length !== 1 ? "s" : ""} · live
+          </p>
         </div>
       </div>
 
@@ -214,17 +226,51 @@ export const AnalyticsPage = () => {
 
             {/* Table Rows */}
             <div className="divide-y divide-white/10">
-              {EARNINGS_PER_BOOKING.map((e, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1.5fr_1fr_auto] gap-4 px-5 py-3.5 items-center hover:bg-white/10 transition-colors">
-                  <span className="text-sm font-semibold text-foreground/90">{e.guest}</span>
-                  <div className="flex flex-col">
-                    <span className="text-sm text-foreground/80">{e.resort}</span>
-                    <span className="text-[10px] text-muted-foreground/60">ID: r-{Math.floor(Math.random() * 90 + 10)}</span>
+              {ledgerLoading && (
+                <div className="px-5 py-6 text-center text-sm text-muted-foreground/50 animate-pulse">
+                  Loading commission ledger…
+                </div>
+              )}
+
+              {!ledgerLoading && ledgerError && (
+                <div className="px-5 py-6 text-center text-sm text-red-400/70">
+                  Failed to load ledger. Please refresh.
+                </div>
+              )}
+
+              {!ledgerLoading && !ledgerError && ledgerRows.length === 0 && (
+                <div className="px-5 py-6 text-center text-sm text-muted-foreground/50">
+                  No commission entries yet. Bookings will appear here once synced.
+                </div>
+              )}
+
+              {!ledgerLoading && ledgerRows.map((row) => (
+                <div
+                  key={row.id}
+                  className="grid grid-cols-[1fr_1.5fr_1fr_auto] gap-4 px-5 py-3.5 items-center hover:bg-white/10 transition-colors"
+                >
+                  <span className="text-sm font-semibold text-foreground/90 truncate">
+                    {row.guest_name ?? "—"}
+                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm text-foreground/80 truncate">
+                      {row.properties?.name ?? "—"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/60">
+                      {row.check_in} → {row.check_out}
+                    </span>
                   </div>
                   <div>
-                    <PlatformBadge platform={e.platform} />
+                    <PlatformBadge platform={row.ota_name} />
                   </div>
-                  <span className="text-sm font-bold text-red-400/90 text-right">- ₱{e.amount.toLocaleString()}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-green-400/90">
+                      +{row.currency ?? "₱"}{Number(row.commission_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <div className="text-[10px] text-muted-foreground/50">
+                      {row.properties?.commission_rate ?? "—"}% of {Number(row.amount).toLocaleString()}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
