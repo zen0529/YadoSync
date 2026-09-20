@@ -9,14 +9,19 @@
 
 ## Current State Snapshot
 
-| Layer | File / Location | What exists today |
+> **Last updated: 2026-09-18**
+
+| Layer | File / Location | Status |
 |---|---|---|
-| **pg_cron job** | Supabase Dashboard → Database → Cron Jobs | ✅ Already live. Calls `pollBookingFeed` via `net.http_post` every 1 minute with `{"source":"cron"}`. |
-| Edge Function | `pollBookingFeed/index.ts` | ✅ Drains feed, apply → ack. ❌ No retry state, no transient-error classification. |
-| Edge Function | `channex-webhook/index.ts` | ✅ Pulls revision by id, apply → ack. Returns 500 on failure so Channex retries. |
-| Shared util | `_shared/bookings.ts` | ✅ `applyRevision()`: new → upsert, cancellation → status, modified → `modified_pending`. ❌ No failure tracking. |
-| Hook | `hooks/useBookings.js` | ✅ TanStack Query, `refetchInterval: 60s`. ❌ No Realtime subscription. |
-| Page | `ui/BookingsPage.jsx` | ✅ OTA filter, TapeChart, `modified_pending` banner, AddBookingModal. ❌ "Review now →" is a dead link. |
+| **pg_cron job** | Supabase Dashboard → Database → Cron Jobs | ✅ Live. Calls `pollBookingFeed` via `net.http_post` every 1 min with `{"source":"cron"}`. |
+| **DB migration** | `migrations/20260916_revision_failures.sql` | ✅ `revision_failures` table + `upsert_revision_failure` RPC deployed. |
+| **Edge Function** | `pollBookingFeed/index.ts` | ✅ Drains feed, apply → ack. ✅ Transient/permanent error routing. ✅ `upsertRevisionFailure` + `markRevisionResolved`. ✅ 30-min window expiry detection. ✅ Skip-and-ack for unknown property IDs. ❌ No `sync_logs` writes on permanent failure (Phase 2). |
+| **Edge Function** | `channex-webhook/index.ts` | ⏸️ **Intentionally deferred** — polling every minute is the sole delivery mechanism for now. Webhooks would add low-latency push but are not needed while cron polling is sufficient. |
+| **Shared util** | `_shared/bookingsPage/applyRevision.ts` | ✅ `new` → upsert + `commission_amount` = `SUM(rooms[].amount) × rate` + `updatePropertyCommission()` rollup. ✅ `cancellation` → `commission_amount = 0` + rollup. ✅ `modified` → commission **recalculated** from new room amounts (not zeroed, not stale) + rollup + flagged for human review. ✅ `ApplyResult` with `kind: ErrorKind`. |
+| **Shared util** | `_shared/bookingsPage/classifyError.ts` | ✅ Full transient/permanent classification (HTTP, SQLSTATE, PGRST, TypeError). |
+| **Shared util** | `_shared/bookings.ts` | ✅ `upsertRevisionFailure()` + `markRevisionResolved()` — failure tracking helpers. |
+| **Hook** | `bookings/hooks/useBookings.js` | ✅ TanStack Query, `refetchInterval: 60s`. ✅ `otaName` + `propertyId` params supported. ❌ OTA filter still client-side in `BookingsPage.jsx` — hook param not wired up. ❌ No Realtime subscription (Phase 3.1). |
+| **Page** | `bookings/ui/BookingsPage.jsx` | ✅ `modified` banner + count. ✅ OTA filter UI. ✅ TapeChart + AddBookingModal. ❌ "Review now →" is a dead `<span>` (Phase 3.2). ❌ OTA filter is client-side `.filter()` (Phase 3.4). ❌ No `SyncHealthBanner` (Phase 3.3). |
 
 ### Cron Job (already live)
 

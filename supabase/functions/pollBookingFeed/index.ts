@@ -51,6 +51,7 @@ serve(async (req) => {
   let failed    = 0;
   let permanent = 0;   // failures that need human intervention
   let acked     = 0;
+  let skipped   = 0;   // revisions for unknown/unmapped property ids — skip-and-acked
 
   /** 30-minute Channex feed expiry window in milliseconds */
   const THIRTY_MINUTES_MS = 30 * 60 * 1_000;
@@ -65,6 +66,28 @@ serve(async (req) => {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+
+    // ── Prefetch known property ids (once per run) ────────────────────────
+    // The Channex feed is account-wide: it delivers revisions for EVERY
+    // property the API key can see, including stray test properties that
+    // don't exist in YadoSync. We skip-and-ack those immediately so they
+    // never wedge the poller.
+    const { data: propRows, error: propErr } = await supabase
+      .from("properties")
+      .select("channex_property_id");
+
+    if (propErr) {
+      // Non-fatal: if we can't fetch properties, fall back to processing all
+      // revisions normally (applyRevision will surface the error per booking).
+      console.warn(
+        "[pollBookingFeed] Could not prefetch property ids — skipping unknown-property guard:",
+        propErr.message,
+      );
+    }
+
+    const knownPropertyIds = new Set<string>(
+      (propRows ?? []).map((r: { channex_property_id: string }) => r.channex_property_id).filter(Boolean),
     );
 
     // ── Drain the feed ────────────────────────────────────────────────────
@@ -96,6 +119,33 @@ serve(async (req) => {
 
       for (const revision of revisions) {
         const revId = revision.id;
+        const propId = revision.attributes?.property_id;
+
+        // ── Skip-and-ack unknown property ids ────────────────────────────
+        // If this revision belongs to a property not registered in YadoSync
+        // (e.g. a stray test property on the Channex account), there is
+        // nothing to apply. Ack it immediately so it leaves the feed and
+        // doesn't permanently wedge the poller.
+        if (knownPropertyIds.size > 0 && propId && !knownPropertyIds.has(propId)) {
+          console.warn(
+            `[pollBookingFeed] Skipping revision ${revId} — property_id ${propId} is not in YadoSync. Acking to unblock feed.`,
+          );
+          try {
+            await channexPostRaw(
+              `/booking_revisions/${revId}/ack`,
+              {},
+              channexApiKey,
+              CHANNEX_BASE_URL,
+            );
+          } catch (ackErr: any) {
+            // Non-fatal: if the ack fails the revision will re-surface in 30 min
+            // and be skipped again. Just log it.
+            console.warn(`[pollBookingFeed] Ack failed for skipped revision ${revId}: ${ackErr.message}`);
+          }
+          skipped++;
+          totalDrained++;
+          continue;
+        }
 
         // Apply to Supabase
         const result = await applyRevision(revision, supabase);
@@ -145,8 +195,21 @@ serve(async (req) => {
               `[pollBookingFeed] PERMANENT failure for revision ${revId} (booking ${revision.attributes?.booking_id}):`,
               alertReason,
             );
-            errors.push(`[PERMANENT] Revision ${revId}: ${alertReason}`);
-            // TODO Phase 2: write to sync_logs + trigger superadmin alert
+            // Phase 2: write permanent failures / window expirations to sync_logs
+            await supabase.from("sync_logs").insert({
+              type: "booking_poller_permanent_failure",
+              status: "failed",
+              platform: "channex",
+              message: `Revision ${revId} failed: ${alertReason}`,
+              payload: {
+                revision_id: revId,
+                booking_id: revision.attributes?.booking_id,
+                reason: alertReason,
+                error_kind: result.kind,
+                age_minutes: Math.round(ageMs / 60_000),
+              },
+              synced_at: new Date().toISOString(),
+            });
           } else {
             // Transient error within the 30-min window — leave un-acked.
             // The revision will re-surface on the next poll cycle (every 1 min).
@@ -170,11 +233,11 @@ serve(async (req) => {
     }
 
     console.log(
-      `[pollBookingFeed] source=${source} applied=${applied} failed=${failed} permanent=${permanent} acked=${acked} errors=${errors.length}`,
+      `[pollBookingFeed] source=${source} applied=${applied} skipped=${skipped} failed=${failed} permanent=${permanent} acked=${acked} errors=${errors.length}`,
     );
 
     return new Response(
-      JSON.stringify({ applied, failed, permanent, acked, errors, source }),
+      JSON.stringify({ applied, skipped, failed, permanent, acked, errors, source }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 

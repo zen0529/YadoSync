@@ -19,7 +19,7 @@ import { AdminOverviewPage } from "@/features/superadmin/overview/page/AdminOver
 import { AdminPropertiesPage } from "@/features/superadmin/properties";
 import { AdminCommissionsPage } from "@/features/superadmin/commissions";
 import { BillingPage } from "@/features/superadmin/billing/ui/BillingPage";
-import { SystemLogsPage } from "@/features/superadmin/logs/ui/SystemLogsPage.jsx";
+import { SystemLogsPage } from "@/features/superadmin/logs";
 import LandingPage from "@/features/landingPage/LandingPage";
 
 import "leaflet/dist/leaflet.css";

@@ -1,8 +1,9 @@
 /**
  * _shared/bookings.ts
  *
- * Revision failure tracking helpers: upsertRevisionFailure and markRevisionResolved.
- * These are used by pollBookingFeed after applyRevision returns ok: false.
+ * Revision failure tracking helpers: upsertRevisionFailure, markRevisionResolved,
+ * and markRevisionRecoveredByBookingId.
+ * Used by pollBookingFeed and recoverMissingBookings.
  *
  * apply logic lives in _shared/bookingsPage/applyRevision.ts.
  */
@@ -70,5 +71,27 @@ export async function markRevisionResolved(
   if (error) {
     // Non-fatal — the booking was saved successfully. Just log.
     console.error(`[bookings] Failed to mark revision ${revisionId} as resolved:`, error.message);
+  }
+}
+
+/**
+ * Mark all unresolved revision failures for a booking ID as resolved.
+ * Called by recoverMissingBookings after a missing booking is successfully recovered.
+ */
+export async function markRevisionRecoveredByBookingId(
+  supabase: ReturnType<typeof createClient>,
+  bookingId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("revision_failures")
+    .update({ resolved: true, resolved_at: new Date().toISOString() })
+    .eq("booking_id", bookingId)
+    .eq("resolved", false);
+
+  if (error) {
+    console.error(
+      `[bookings] Failed to mark revision failures resolved for booking ${bookingId}:`,
+      error.message,
+    );
   }
 }
