@@ -20,8 +20,8 @@
 | **Shared util** | `_shared/bookingsPage/applyRevision.ts` | ✅ `new` → upsert + `commission_amount` = `SUM(rooms[].amount) × rate` + `updatePropertyCommission()` rollup. ✅ `cancellation` → `commission_amount = 0` + rollup. ✅ `modified` → commission **recalculated** from new room amounts (not zeroed, not stale) + rollup + flagged for human review. ✅ `ApplyResult` with `kind: ErrorKind`. |
 | **Shared util** | `_shared/bookingsPage/classifyError.ts` | ✅ Full transient/permanent classification (HTTP, SQLSTATE, PGRST, TypeError). |
 | **Shared util** | `_shared/bookings.ts` | ✅ `upsertRevisionFailure()` + `markRevisionResolved()` — failure tracking helpers. |
-| **Hook** | `bookings/hooks/useBookings.js` | ✅ TanStack Query, `refetchInterval: 60s`. ✅ `otaName` + `propertyId` params supported. ❌ OTA filter still client-side in `BookingsPage.jsx` — hook param not wired up. ❌ No Realtime subscription (Phase 3.1). |
-| **Page** | `bookings/ui/BookingsPage.jsx` | ✅ `modified` banner + count. ✅ OTA filter UI. ✅ TapeChart + AddBookingModal. ❌ "Review now →" is a dead `<span>` (Phase 3.2). ❌ OTA filter is client-side `.filter()` (Phase 3.4). ❌ No `SyncHealthBanner` (Phase 3.3). |
+| **Hook** | `bookings/hooks/useBookings.js` | ✅ TanStack Query, `refetchInterval: 60s`. ✅ `otaName` + `propertyId` params supported. ✅ Realtime subscription on `bookings` (Phase 3.1). ❌ OTA filter still client-side in `BookingsPage.jsx` (Phase 3.4). |
+| **Page** | `bookings/ui/BookingsPage.jsx` | ✅ `modified` banner + count. ✅ OTA filter UI. ✅ TapeChart + AddBookingModal. ❌ OTA filter is client-side `.filter()` (Phase 3.4). ❌ No `SyncHealthBanner` (Phase 3.3). |
 
 ### Cron Job (already live)
 
@@ -276,29 +276,27 @@ useEffect(() => {
 
 ---
 
-### 3.2 — `modified_pending` review modal
+### 3.2 — Modified booking details modal
 
-The alert banner already shows the count. The "Review now →" link currently does nothing.
+The alert banner in `BookingsPage` displays the count of bookings with `status === "modified"`.
 
-**Add:** A `ModifiedBookingReviewModal` component that:
-- Lists all `modified_pending` bookings
-- Shows what changed (from `notes` field populated by `buildModificationNote()`)
-- Shows a diff from `raw_payload`
-- Provides **Confirm** (apply changes, set `status = "confirmed"`) and **Reject** actions
+Per the Channex integration standard:
+> *"modified → safest default is log + ack + notify a human, because blindly applying OTA modifications (date/room/price changes) to a live calendar needs reconciliation UX the PMS probably doesn't have yet. Say so to the user instead of silently auto-applying."*
+
+The purpose of this modal is pure **informational transparency**: when an OTA updates a booking, the property owner is notified and can clearly see what changed (new dates, updated room rates, guest notes) so they are never surprised by automatic calendar shifts.
+
+**Add:** A `ModifiedBookingDetailsModal` component that:
+- Displays all bookings currently with `status === "modified"`
+- Shows the modification summary (extracted from `booking.notes` populated by `buildModificationNote()`, stay dates, amount, and guest details)
+- Provides a simple **"Close"** button to dismiss the view (no backend mutation or edge function required)
 
 **Files to create:**
 ```
 src/features/property-owner/bookings/components/
-└── ModifiedBookingReviewModal/
+└── ModifiedBookingDetailsModal/
     ├── index.js
-    ├── ModifiedBookingReviewModal.jsx
-    ├── ModificationDiffCard.jsx        ← shows old vs new values side by side
-    └── ReviewActionBar.jsx             ← Confirm / Reject buttons
+    └── ModifiedBookingDetailsModal.jsx
 ```
-
-**Hook to add:** `hooks/useReviewModification.js`
-- Calls a new Edge Function `resolveModifiedBooking` that updates the booking status
-  in Supabase and acks the revision on Channex.
 
 ---
 
@@ -365,8 +363,8 @@ Phase 1.3  pollBookingFeed: retry loop + failure recording
 Phase 1.4  pollBookingFeed: mark resolved on success
 Phase 2.1  New edge function: recoverMissingBookings
 Phase 2.2  sync_logs entries for recovery
-Phase 3.1  useBookings: realtime subscription
-Phase 3.2  ModifiedBookingReviewModal + resolveModifiedBooking edge function
+✅ Phase 3.1  useBookings: realtime subscription
+Phase 3.2  ModifiedBookingDetailsModal component
 Phase 3.3  SyncHealthBanner component
 Phase 3.4  OTA filter: server-side via hook params
 Phase 4.1  AdminBookingsPage: recovery trigger panel

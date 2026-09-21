@@ -287,6 +287,19 @@ export async function applyRevision(
 
           console.log(`[applyRevision] Inserted missing modified booking ${attr.booking_id} for property ${property.id}`);
           await updatePropertyCommission(supabase, property.id);
+
+          // Write in-app notification for the property owner
+          const notificationMessage = `Booking from ${attr.ota_name ?? "OTA"}${guestName ? ` (${guestName})` : ""} was modified (${attr.arrival_date} → ${attr.departure_date}). Please review room assignments.`;
+          await supabase.from("notifications").insert({
+            property_id: property.id,
+            booking_id: attr.booking_id,
+            type: "booking_modified",
+            channel: "in_app",
+            status: "unread",
+            message: notificationMessage,
+            sent_at: now,
+          });
+
           return { ok: true };
         }
 
@@ -303,6 +316,22 @@ export async function applyRevision(
       const propertyId = modified[0].property_id ?? property?.id;
       if (propertyId) {
         await updatePropertyCommission(supabase, propertyId);
+
+        // Write in-app notification for the property owner
+        const notificationMessage = `Booking from ${attr.ota_name ?? "OTA"}${guestName ? ` (${guestName})` : ""} was modified (${attr.arrival_date} → ${attr.departure_date}). Please review room assignments.`;
+        const { error: notifErr } = await supabase.from("notifications").insert({
+          property_id: propertyId,
+          booking_id: attr.booking_id,
+          type: "booking_modified",
+          channel: "in_app",
+          status: "unread",
+          message: notificationMessage,
+          sent_at: now,
+        });
+
+        if (notifErr) {
+          console.warn(`[applyRevision] Could not insert notification for modified booking ${attr.booking_id}:`, notifErr.message);
+        }
       }
 
       return { ok: true };

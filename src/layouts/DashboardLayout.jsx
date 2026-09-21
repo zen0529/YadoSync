@@ -21,6 +21,7 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { useActiveProperty } from "@/features/property-owner/context/PropertyContext";
 import { PropertySelector } from "@/features/property-owner/components/PropertySelector";
+import { NotificationBell } from "@/features/property-owner/notifications";
 import { supabase } from "@/lib/supabase";
 import yadoLogo from "@/assets/logoWhite.png";
 import {
@@ -273,6 +274,9 @@ const DashboardLayoutInner = () => {
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Property Selector */}
             <PropertySelector />
+
+            {/* Notifications */}
+            <NotificationBell />
 
             {/* Dark Mode Toggle (Circular icon button only) */}
             <button
