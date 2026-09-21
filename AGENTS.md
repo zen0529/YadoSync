@@ -193,6 +193,14 @@ Edge Functions serve as the secure bridge between YadoManagement and the Channex
 ## Coding Conventions
 
 - **Feature Architecture**: Strictly adhere to the subfolder structure + `index.js` feature structure defined in the Architecture section above.
+- **Separation of Concerns (SoC)**:
+  The codebase enforces strict horizontal and vertical separation across distinct architectural boundaries:
+  1. **Presentation Layer (`components/`, `page/`)**: Concerned *strictly* with rendering DOM, styling with Tailwind/shadcn, and capturing user gestures. Zero direct knowledge of Supabase, external APIs, or raw database structures.
+  2. **Orchestration & State Layer (`hooks/`)**: Concerned with managing component state machines, TanStack Query lifecycles, and Realtime event subscriptions (CDC). Acts as the mandatory bridge between UI and Data.
+  3. **Data Access Layer (`supabase/`)**: Concerned *strictly* with communicating with Supabase PostgreSQL and invoking Edge Functions. Pure async functions with zero React state, zero hooks, and zero JSX.
+  4. **Caching & Query Contract Layer (`tanstack/`)**: Concerned with query key factories, cache invalidation strategies, and TanStack Query options.
+  5. **Domain Logic & Computation Layer (`utils/`)**: Concerned with pure, deterministic computations (commission calculations, date range formatting, diff calculations, currency formatting). Side-effect-free with no external dependencies.
+  6. **Integration & Channel Backbone Layer (Edge Functions)**: Concerned with secure Channex API communication, webhook processing, database transactional writes, and sync logging. Completely isolated from the client.
 - **Single Responsibility Principle (SRP)**:
   - **Components (`components/`, `page/`)**: Responsible _strictly for presentation and rendering_. Break complex forms/views into small, focused sub-components. Never put data-fetching logic or heavy data transformations inside UI components.
   - **Hooks (`hooks/`)**: Each hook manages _one specific workflow or state machine_ (e.g., `useRatePlanForm`, `useInventoryCalendar`), acting as the dedicated bridge between UI, TanStack Query, and data access.
@@ -200,6 +208,11 @@ Edge Functions serve as the secure bridge between YadoManagement and the Channex
   - **TanStack (`tanstack/`)**: Responsible _strictly for query key factories, query options, and cache management helpers_ for TanStack Query.
   - **Utils (`utils/`)**: Pure, side-effect-free helper functions that do one thing (formatting, calculations, matrix transformations). No React dependencies or hooks.
   - **Edge Functions**: Each function handles _one discrete business operation_ (e.g., `createRatePlan`, `pushRestrictions`, `createProperty`).
+- **File Granularity (One File Per Discrete Unit)**:
+  - **Components (`components/`)**: Strictly 1 file per component (`ParentComponent.jsx`, `ChildCard.jsx`).
+  - **Hooks (`hooks/`)**: Strictly 1 file per custom hook (`useBookings.js`, `useNotifications.js`).
+  - **Data Access (`supabase/`)**: Strictly 1 file per discrete query or mutation function (`getBookings.js`, `updateBooking.js`), exposed via a feature-level `index.js` barrel. Never create monolithic `api.js` files with dozens of queries.
+  - **Utilities (`utils/`)**: Group tightly-related pure helper functions by domain (e.g., `formatters.js`, `dateUtils.js`) to avoid trivial 2-line file fragmentation. Large or algorithmic utilities (e.g., `compressRestrictions.ts`) remain in their own file.
 - **Hook Bridge Rule**: Custom React hooks in `hooks/` are the **mandatory bridge** between UI components (`page/`, `components/`) and the data/caching layer (`supabase/`, `tanstack/`). UI components must never query Supabase or external APIs directly.
 - **Import Rules & Boundaries**:
   - Global layers (`src/components/`, `src/layouts/`, `src/lib/`, `src/utils/`, `src/hooks/`) can never import from `src/features/`.
