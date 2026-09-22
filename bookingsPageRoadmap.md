@@ -21,7 +21,9 @@
 | **Shared util** | `_shared/bookingsPage/classifyError.ts` | ✅ Full transient/permanent classification (HTTP, SQLSTATE, PGRST, TypeError). |
 | **Shared util** | `_shared/bookings.ts` | ✅ `upsertRevisionFailure()` + `markRevisionResolved()` — failure tracking helpers. |
 | **Hook** | `bookings/hooks/useBookings.js` | ✅ TanStack Query, `refetchInterval: 60s`. ✅ `otaName` + `propertyId` params supported. ✅ Realtime subscription on `bookings` (Phase 3.1). ❌ OTA filter still client-side in `BookingsPage.jsx` (Phase 3.4). |
-| **Page** | `bookings/ui/BookingsPage.jsx` | ✅ `modified` banner + count. ✅ OTA filter UI. ✅ TapeChart + AddBookingModal. ❌ OTA filter is client-side `.filter()` (Phase 3.4). ❌ No `SyncHealthBanner` (Phase 3.3). |
+| **Edge Function** | `recoverMissingBookings/index.ts` | ✅ Live (Phase 2.1 & 2.2). Drains Channex archive for missing bookings older than 30 min, applies via `applyRevision`, marks resolved, and writes to `sync_logs`. |
+| **Page** | `bookings/ui/BookingsPage.jsx` | ✅ Notification-driven `ModifiedBookingDetailsModal` (Phase 3.2). ✅ OTA filter UI. ✅ TapeChart + AddBookingModal. ❌ OTA filter is client-side `.filter()` (Phase 3.4). ❌ No `SyncHealthBanner` (Phase 3.3). |
+| **Superadmin** | `logs/components/RecoverBookingsModal.jsx` | ✅ Live (Phase 4.1). Manual recovery trigger modal with dry-run support calling `recoverMissingBookings`. |
 
 ### Cron Job (already live)
 
@@ -205,17 +207,18 @@ This closes the retry loop cleanly and keeps the failure table tidy.
 > Once a revision falls out of the feed, the only recovery path is the
 > Channex Booking List API.
 
-### 2.1 — New Edge Function: `recoverMissingBookings`
+**Status:** ✅ **Implemented & Deployed**
+
+### 2.1 — Edge Function: `recoverMissingBookings`
 
 This function is **one-shot** (triggered manually by the superadmin, never on a cron).
-It should NOT be run periodically — that would re-pull the same bookings endlessly.
+It is NOT run periodically — that would re-pull the same bookings endlessly.
 
-**Trigger:** Superadmin notices a gap in bookings or sees persistent failure records
-in the `revision_failures` table.
+**Trigger:** Superadmin notices a gap in bookings or triggers recovery from the Superadmin Sync Logs modal.
 
 **Steps:**
 1. **Identify missing revisions** — query `revision_failures` where `resolved = false`
-   and `first_failed_at < now() - 30 minutes`.
+   and `first_failed_at < now() - 30 minutes` (or custom `from_ts`).
 2. **Call `GET /bookings`** on Channex, filtered by `inserted_at[gte]` = earliest
    `first_failed_at` timestamp.
 3. **Find missing bookings** — match by `channex_booking_id`. Any booking returned by
@@ -223,17 +226,13 @@ in the `revision_failures` table.
 4. **Save to database** — use the same `applyRevision` upsert logic (idempotent insert).
 5. **Mark recovered** — update `revision_failures` rows to `resolved = true`.
 
-```
-supabase/functions/
-└── recoverMissingBookings/
-    └── index.ts
-```
+**Location:** [`supabase/functions/recoverMissingBookings/index.ts`](file:///c:/Users/SEJI/YadoSync/supabase/functions/recoverMissingBookings/index.ts) ✅
 
 ---
 
 ### 2.2 — `sync_logs` entries for all recovery attempts
 
-Every recovery attempt (success or failure) must be written to `sync_logs` per the
+Every recovery attempt (success or failure) is written to `sync_logs` per the
 project rule: *"Every sync attempt must be logged in `sync_logs` regardless of success
 or failure."*
 
@@ -245,6 +244,7 @@ await supabase.from("sync_logs").insert({
   created_at: new Date().toISOString(),
 });
 ```
+✅ Implemented in `recoverMissingBookings/index.ts`.
 
 ---
 
@@ -276,21 +276,21 @@ useEffect(() => {
 
 ---
 
-### 3.2 — Modified booking details modal
+### 3.2 — Modified booking details modal (Notification-triggered)
 
-The alert banner in `BookingsPage` displays the count of bookings with `status === "modified"`.
+When an OTA modifies an existing booking, an in-app notification is inserted (`type: "booking_modified"`). Clicking the notification from the header dropdown opens the `ModifiedBookingDetailsModal` directly on the Bookings page.
 
 Per the Channex integration standard:
 > *"modified → safest default is log + ack + notify a human, because blindly applying OTA modifications (date/room/price changes) to a live calendar needs reconciliation UX the PMS probably doesn't have yet. Say so to the user instead of silently auto-applying."*
 
 The purpose of this modal is pure **informational transparency**: when an OTA updates a booking, the property owner is notified and can clearly see what changed (new dates, updated room rates, guest notes) so they are never surprised by automatic calendar shifts.
 
-**Add:** A `ModifiedBookingDetailsModal` component that:
-- Displays all bookings currently with `status === "modified"`
-- Shows the modification summary (extracted from `booking.notes` populated by `buildModificationNote()`, stay dates, amount, and guest details)
-- Provides a simple **"Close"** button to dismiss the view (no backend mutation or edge function required)
+**Component:** `ModifiedBookingDetailsModal`
+- Triggered seamlessly when the owner clicks a `"booking_modified"` notification in `NotificationBell`.
+- Displays the modification summary (extracted from `booking.notes` populated by `buildModificationNote()`, stay dates, amount, and guest details).
+- Provides a simple **"Close"** button to dismiss the view (no backend mutation or edge function required).
 
-**Files to create:**
+**Files created:**
 ```
 src/features/property-owner/bookings/components/
 └── ModifiedBookingDetailsModal/
@@ -338,36 +338,38 @@ const filtered = bookings; // already filtered by the query
 
 ---
 
-## Phase 4 — Superadmin: Recovery Trigger Panel
+## Phase 4 — Superadmin: Recovery Trigger Modal
 
 > Superadmin needs a way to trigger `recoverMissingBookings` without SSH access.
 
-**File location:** `src/features/superadmin/bookings/`
+**Status:** ✅ **Implemented** in `src/features/superadmin/logs/`
 
-### 4.1 — Recovery panel in `AdminBookingsPage`
+### 4.1 — Recovery modal (`RecoverBookingsModal`)
 
-Add a collapsible "Sync Recovery" panel that:
-- Shows all unresolved `revision_failures` rows (revision ID, booking ID, attempt count,
-  age, last error)
-- Has a **"Trigger Recovery"** button — calls `supabase.functions.invoke("recoverMissingBookings")`
-- Shows the result: how many bookings were recovered vs still failed
+Implemented in Superadmin Sync Logs (`src/features/superadmin/logs/`):
+- **Modal:** [`RecoverBookingsModal.jsx`](file:///c:/Users/SEJI/YadoSync/src/features/superadmin/logs/components/RecoverBookingsModal.jsx)
+- **Hook:** [`useRecoverBookings.js`](file:///c:/Users/SEJI/YadoSync/src/features/superadmin/logs/hooks/useRecoverBookings.js)
+- **API:** [`recoveryApi.js`](file:///c:/Users/SEJI/YadoSync/src/features/superadmin/logs/supabase/recoveryApi.js)
+- Automatically resolves the earliest unresolved failure timestamp from `revision_failures` as the starting window.
+- Allows live recovery and optional dry-run preview before executing.
+- Calls `supabase.functions.invoke("recoverMissingBookings", { body: { startingFrom, dryRun } })` and writes to `sync_logs`.
 
 ---
 
 ## Implementation Order
 
 ```
-Phase 1.1  DB migration: revision_failures table
-Phase 1.2  _shared/bookings.ts: ApplyResult kind classification
-Phase 1.3  pollBookingFeed: retry loop + failure recording
-Phase 1.4  pollBookingFeed: mark resolved on success
-Phase 2.1  New edge function: recoverMissingBookings
-Phase 2.2  sync_logs entries for recovery
+✅ Phase 1.1  DB migration: revision_failures table
+✅ Phase 1.2  _shared/bookings.ts: ApplyResult kind classification
+✅ Phase 1.3  pollBookingFeed: retry loop + failure recording
+✅ Phase 1.4  pollBookingFeed: mark resolved on success
+✅ Phase 2.1  Edge function: recoverMissingBookings
+✅ Phase 2.2  sync_logs entries for recovery
 ✅ Phase 3.1  useBookings: realtime subscription
 ✅ Phase 3.2  ModifiedBookingDetailsModal component
 Phase 3.3  SyncHealthBanner component
 Phase 3.4  OTA filter: server-side via hook params
-Phase 4.1  AdminBookingsPage: recovery trigger panel
+✅ Phase 4.1  Superadmin: RecoverBookingsModal (in logs)
 ```
 
 ---
