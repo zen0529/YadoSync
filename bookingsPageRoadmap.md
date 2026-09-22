@@ -364,7 +364,7 @@ Phase 1.4  pollBookingFeed: mark resolved on success
 Phase 2.1  New edge function: recoverMissingBookings
 Phase 2.2  sync_logs entries for recovery
 ✅ Phase 3.1  useBookings: realtime subscription
-Phase 3.2  ModifiedBookingDetailsModal component
+✅ Phase 3.2  ModifiedBookingDetailsModal component
 Phase 3.3  SyncHealthBanner component
 Phase 3.4  OTA filter: server-side via hook params
 Phase 4.1  AdminBookingsPage: recovery trigger panel

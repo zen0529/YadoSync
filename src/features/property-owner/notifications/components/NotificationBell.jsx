@@ -46,7 +46,12 @@ export function NotificationBell() {
     setOpen(false);
 
     if (notification.type === "booking_modified" || notification.booking_id) {
-      navigate("/dashboard/bookings");
+      navigate("/dashboard/bookings", {
+        state: {
+          openModifiedBookingId: notification.booking_id,
+          timestamp: Date.now(),
+        },
+      });
     }
   };
 
