@@ -10,7 +10,8 @@
  * When called from cron: syncs ALL properties visible to the service key.
  * When called manually with a propertyId: syncs only that property.
  *
- * For each room type  → pushes count_of_rooms availability for next 365 days
+ * For each room type  → pushes stored availability for the next 500 days,
+ *                      filling only dates that have not been initialized yet
  * For each rate plan  → reads restrictions table rows for future dates,
  *                       pushes them to Channex (or pushes rate=0 if none exist)
  *
@@ -29,6 +30,7 @@ import {
   type AvailabilityEntry,
   type RestrictionEntry,
 } from "../_shared/channex.ts";
+import { buildAvailabilityWindow } from "../_shared/buildAvailabilityWindow.ts";
 
 const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL");
 const PUSH_DAYS = 500;
@@ -64,6 +66,35 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
+    async function pushAndLog(
+      path: "/availability" | "/restrictions",
+      values: unknown[],
+      propertyId: string,
+      entityId: string,
+    ) {
+      let syncError: unknown;
+      try {
+        await channexPost(path, { values }, channexApiKey, CHANNEX_BASE_URL);
+      } catch (err) {
+        syncError = err;
+      }
+
+      const { error: logError } = await supabase.from("sync_logs").insert({
+        type: path === "/availability" ? "full_sync_availability" : "full_sync_restrictions",
+        status: syncError ? "failed" : "ok",
+        platform: "channex",
+        message: syncError ? "Full ARI push failed" : "Full ARI push completed",
+        payload: {
+          property_id: propertyId,
+          entity_id: entityId,
+          error: syncError instanceof Error ? syncError.message : syncError ? String(syncError) : null,
+        },
+        synced_at: new Date().toISOString(),
+      });
+      if (logError) console.error("[fullSyncARI] Failed to record sync attempt:", logError);
+      if (syncError) throw syncError;
+    }
+
     // ── 1. Load properties ────────────────────────────────────────────────
     let propertiesQuery = supabase
       .from("properties")
@@ -75,8 +106,7 @@ serve(async (req) => {
     }
 
     const { data: properties, error: propError } = await propertiesQuery;
-    if (propError)
-      throw new Error(`Failed to load properties: ${propError.message}`);
+    if (propError) throw propError;
     if (!properties || properties.length === 0) {
       return new Response(
         JSON.stringify({
@@ -104,20 +134,68 @@ serve(async (req) => {
         .not("channex_room_type_id", "is", null);
 
       if (rtError) {
-        errors.push(
-          `[${propertyId}] Failed to load room types: ${rtError.message}`,
-        );
+        console.error(`[fullSyncARI] Failed to load room types for ${propertyId}:`, rtError);
+        errors.push("A property's room types could not be loaded.");
         continue;
       }
 
       for (const rt of roomTypes ?? []) {
         try {
           const dates = dateRange(today, PUSH_DAYS);
-          const entries: AvailabilityEntry[] = dates.map((d) => ({
-            date: d,
-            available: rt.count_of_rooms ?? 0,
-          }));
-          const filtered = filterPastDates(entries);
+          const { data: storedRows, error: availabilityError } = await supabase
+            .from("availability")
+            .select("date, available")
+            .eq("room_type_id", rt.id)
+            .gte("date", dates[0])
+            .lte("date", dates[dates.length - 1])
+            .order("date");
+
+          if (availabilityError) throw availabilityError;
+
+          const defaultAvailability = rt.count_of_rooms ?? 0;
+          const { missingDates } = buildAvailabilityWindow(
+            dates,
+            storedRows ?? [],
+            defaultAvailability,
+          );
+
+          if (missingDates.length > 0) {
+            const { error: insertError } = await supabase
+              .from("availability")
+              .upsert(
+                missingDates.map((date) => ({
+                  property_id: propertyId,
+                  room_type_id: rt.id,
+                  date,
+                  available: defaultAvailability,
+                })),
+                { onConflict: "room_type_id,date", ignoreDuplicates: true },
+              );
+
+            if (insertError) throw insertError;
+          }
+
+          // Re-read after inserting missing dates so concurrent edits win.
+          const { data: currentRows, error: currentError } = missingDates.length
+            ? await supabase
+              .from("availability")
+              .select("date, available")
+              .eq("room_type_id", rt.id)
+              .gte("date", dates[0])
+              .lte("date", dates[dates.length - 1])
+              .order("date")
+            : { data: storedRows, error: null };
+
+          if (currentError) throw currentError;
+          const { entries, missingDates: stillMissing } = buildAvailabilityWindow(
+            dates,
+            currentRows ?? [],
+            defaultAvailability,
+          );
+          if (stillMissing.length > 0) {
+            throw new Error(`Availability initialization incomplete for room type ${rt.id}`);
+          }
+          const filtered: AvailabilityEntry[] = filterPastDates(entries);
           const ranges = compressAvailability(filtered);
 
           const channexValues = ranges.map((r) => ({
@@ -128,28 +206,12 @@ serve(async (req) => {
             availability: r.availability,
           }));
 
-          await channexPost(
-            "/availability",
-            { values: channexValues },
-            channexApiKey,
-            CHANNEX_BASE_URL,
-          );
-
-          // Mirror to Supabase
-          const upsertRows = filtered.map((v) => ({
-            property_id: propertyId,
-            room_type_id: rt.id,
-            date: v.date,
-            available: v.available,
-            updated_at: new Date().toISOString(),
-          }));
-          await supabase
-            .from("availability")
-            .upsert(upsertRows, { onConflict: "room_type_id,date" });
+          await pushAndLog("/availability", channexValues, propertyId, rt.id);
 
           roomTypeCount++;
         } catch (err: any) {
-          errors.push(`[RT ${rt.id}] ${err.message}`);
+          console.error(`[fullSyncARI] Room type ${rt.id} sync failed:`, err);
+          errors.push("A room type could not be synced. Please try again.");
         }
       }
 
@@ -161,9 +223,8 @@ serve(async (req) => {
         .not("channex_rate_plan_id", "is", null);
 
       if (rpError) {
-        errors.push(
-          `[${propertyId}] Failed to load rate plans: ${rpError.message}`,
-        );
+        console.error(`[fullSyncARI] Failed to load rate plans for ${propertyId}:`, rpError);
+        errors.push("A property's rate plans could not be loaded.");
         continue;
       }
 
@@ -230,15 +291,11 @@ serve(async (req) => {
             return v;
           });
 
-          await channexPost(
-            "/restrictions",
-            { values: channexValues },
-            channexApiKey,
-            CHANNEX_BASE_URL,
-          );
+          await pushAndLog("/restrictions", channexValues, propertyId, rp.id);
           ratePlanCount++;
         } catch (err: any) {
-          errors.push(`[RP ${rp.id}] ${err.message}`);
+          console.error(`[fullSyncARI] Rate plan ${rp.id} sync failed:`, err);
+          errors.push("A rate plan could not be synced. Please try again.");
         }
       }
     }
@@ -258,8 +315,8 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err: any) {
-    console.error("[fullSyncARI] Fatal error:", err.message);
-    return new Response(JSON.stringify({ error: err.message, errors }), {
+    console.error("[fullSyncARI] Fatal error:", err);
+    return new Response(JSON.stringify({ error: "Full sync failed. Please try again.", errors }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
