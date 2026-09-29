@@ -11,7 +11,6 @@ import {
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AddTaxSetPanel } from "./AddTaxSetPanel";
 import { AddCancellationPolicyPanel } from "./AddCancellationPolicyPanel";
 import { getRatePlansByRoomType } from "../supabase/getRatePlans";
 
@@ -262,7 +261,6 @@ export const AddRatePlanPanel = ({
   roomTypes = [],
   ratePlans = [],
   defaultRoomTypeId = null,
-  channexPropertyId = null,
 }) => {
   const [form, setForm] = useState({ ...DEFAULT_FORM });
   const [roomTypeId, setRoomTypeId] = useState("");
@@ -275,7 +273,6 @@ export const AddRatePlanPanel = ({
   const [inherit, setInherit] = useState({ ...DEFAULT_INHERIT });
   const [restrictions, setRestrictions] = useState(makeDefaultRestrictions());
 
-  const [taxSetPanelOpen, setTaxSetPanelOpen] = useState(false);
   const [cancellationPanelOpen, setCancellationPanelOpen] = useState(false);
 
   // Populate / reset on open
@@ -759,12 +756,6 @@ export const AddRatePlanPanel = ({
       </div>
 
       {/* Sub-panels — stacked on top of this panel */}
-      <AddTaxSetPanel
-        open={taxSetPanelOpen}
-        onClose={() => setTaxSetPanelOpen(false)}
-        channexPropertyId={channexPropertyId}
-      />
-
       <AddCancellationPolicyPanel
         open={cancellationPanelOpen}
         onClose={() => setCancellationPanelOpen(false)}

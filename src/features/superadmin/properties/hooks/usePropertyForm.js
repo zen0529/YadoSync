@@ -3,9 +3,7 @@ import { AsYouType } from "libphonenumber-js";
 import { toast } from "sonner";
 import { validatePropertyForm } from "../utils/validatePropertyForm";
 import { uploadPhotos } from "@/utils/uploadPhotos";
-import { deletePropertyPhotos } from "../utils/deletePropertyPhotos";
 import { defaultForm, COUNTRIES, TZ_MAP } from "../constants/propertyConstants";
-import { useAuth } from "@/features/auth/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -21,7 +19,6 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
   const [logoData, setLogoData] = useState({ file: null, preview: "" });
   const [deletedPhotos, setDeletedPhotos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const { user } = useAuth();
 
   // Reset to defaults each time the panel is opened
   useEffect(() => {
@@ -211,7 +208,9 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
               const errBody = await edgeError.context.json();
               if (errBody.error) realMessage = errBody.error;
             }
-          } catch (_) {}
+          } catch (parseError) {
+            console.error("[usePropertyForm] Could not parse update error response:", parseError);
+          }
           throw new Error(`Failed to update property: ${realMessage}`);
         }
         console.log("[DEBUG] Property updated via edge function:", edgeData);
@@ -237,52 +236,12 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
               const errBody = await edgeError.context.json();
               if (errBody.error) realMessage = errBody.error;
             }
-          } catch (_) {}
+          } catch (parseError) {
+            console.error("[usePropertyForm] Could not parse create error response:", parseError);
+          }
           throw new Error(`Failed to create property: ${realMessage}`);
         }
         console.log("[DEBUG] Property created via edge function:", edgeData);
-      }
-
-      // Delete removed photos from Channex via DELETE /api/v1/photos/:id
-      const photosToDelete = deletedPhotos.filter(p => p.channexId);
-      if (photosToDelete.length > 0) {
-        console.log("[DEBUG] Deleting", photosToDelete.length, "photo(s) from Channex:", photosToDelete.map(p => p.channexId));
-        await Promise.all(photosToDelete.map(p => deletePhoto(p.channexId)));
-        console.log("[DEBUG] Channex photo(s) deleted successfully.");
-      }
-
-      // Delete removed photos from Supabase storage bucket.
-      // If this fails after Channex deletion, we rollback by re-creating the photos on Channex.
-      const deletedUrls = deletedPhotos.map(p => p.url).filter(Boolean);
-      if (deletedUrls.length > 0) {
-        try {
-          await deletePropertyPhotos(deletedUrls);
-          console.log("[DEBUG] Deleted", deletedUrls.length, "photo(s) from storage bucket.");
-        } catch (storageErr) {
-          console.error("[DEBUG] Storage bucket deletion failed — reverting Channex photo deletion...", storageErr);
-          // Rollback: re-create every photo that was successfully deleted from Channex
-          if (photosToDelete.length > 0 && propertyToEdit?.channex_property_id) {
-            const rollbackResults = await Promise.allSettled(
-              photosToDelete.map(p =>
-                createPhoto({
-                  property_id: propertyToEdit.channex_property_id,
-                  url:         p.url,
-                  kind:        p.kind        || "photo",
-                  author:      p.author      || null,
-                  description: p.description || null,
-                  position:    p.position    ?? null,
-                })
-              )
-            );
-            const failedRollbacks = rollbackResults.filter(r => r.status === "rejected");
-            if (failedRollbacks.length > 0) {
-              console.error("[DEBUG] Some photos could not be re-created on Channex:", failedRollbacks);
-            } else {
-              console.log("[DEBUG] Channex photo deletion rolled back successfully.");
-            }
-          }
-          throw new Error("Failed to delete photos from storage. The Channex deletion has been reverted.");
-        }
       }
 
       toast.success(propertyToEdit ? "Property updated!" : "Property created!", {
@@ -291,8 +250,9 @@ export const usePropertyForm = (open, onClose, propertyToEdit) => {
       
       onClose();
     } catch (err) {
+      console.error("[usePropertyForm] Failed to save property:", err);
       toast.error(propertyToEdit ? "Failed to update property" : "Failed to create property", {
-        description: err.message || "An unexpected error occurred. Please try again.",
+        description: "Something went wrong. Please try again.",
       });
     } finally {
       setSubmitting(false);
