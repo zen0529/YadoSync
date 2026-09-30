@@ -8,6 +8,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { ChannelsDropdown } from "./ChannelsDropdown";
 
 export const TapeChartToolbar = ({
@@ -34,7 +35,7 @@ export const TapeChartToolbar = ({
   const isFiltered = !selectedChannels.includes("all");
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-3 relative z-30">
+    <div className="relative z-50 mb-3 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
       {/* Date Navigation */}
       <div className="flex items-center gap-1.5">
         <button
@@ -82,11 +83,11 @@ export const TapeChartToolbar = ({
         </div>
 
         {/* Channels Dropdown Trigger & Popover */}
-        <div className="relative">
+        <Popover open={isChannelsOpen} onOpenChange={setIsChannelsOpen}>
+          <PopoverTrigger asChild>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsChannelsOpen((prev) => !prev)}
             className={`h-8 px-3 hover:cursor-pointer rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-xs gap-1.5 transition-colors ${
               isChannelsOpen ? "border-green-500 ring-1 ring-green-500/20" : ""
             }`}
@@ -97,6 +98,7 @@ export const TapeChartToolbar = ({
               <span className="w-1.5 h-1.5 rounded-full bg-green-600" />
             )}
           </Button>
+          </PopoverTrigger>
 
           <ChannelsDropdown
             open={isChannelsOpen}
@@ -104,7 +106,7 @@ export const TapeChartToolbar = ({
             selectedChannels={selectedChannels}
             onApply={onChannelsApply}
           />
-        </div>
+        </Popover>
 
         {/* New Booking Button */}
         <Button

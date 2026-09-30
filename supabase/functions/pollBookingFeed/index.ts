@@ -27,11 +27,11 @@ import {
   channexGetWithMeta,
   channexPostRaw,
   type BookingRevision,
-  type BookingRevisionFeed,
   type BookingRevisionFeedMeta,
 } from "../_shared/channex.ts";
 import { applyRevision } from "../_shared/bookingsPage/applyRevision.ts";
 import { upsertRevisionFailure, markRevisionResolved } from "../_shared/bookings.ts";
+import { dispatchSyncNotifications } from "../_shared/bookingsPage/dispatchSyncNotifications.ts";
 
 const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL") ?? "https://staging.channex.io";
 
@@ -55,18 +55,18 @@ serve(async (req) => {
 
   /** 30-minute Channex feed expiry window in milliseconds */
   const THIRTY_MINUTES_MS = 30 * 60 * 1_000;
+  let supabase: ReturnType<typeof createClient> | undefined;
 
   try {
     const body = await req.json().catch(() => ({}));
     const { source = "manual" } = body as { source?: string };
 
-    const channexApiKey = Deno.env.get("CHANNEX_API_KEY");
-    if (!channexApiKey) throw new Error("CHANNEX_API_KEY secret not set");
-
-    const supabase = createClient(
+    supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
+    const channexApiKey = Deno.env.get("CHANNEX_API_KEY");
+    if (!channexApiKey) throw new Error("CHANNEX_API_KEY secret not set");
 
     // ── Prefetch known property ids (once per run) ────────────────────────
     // The Channex feed is account-wide: it delivers revisions for EVERY
@@ -153,7 +153,11 @@ serve(async (req) => {
         if (result.ok) {
           // ── Success: ack + mark any prior failure record as resolved ─────
           // markRevisionResolved is a no-op when no failure record exists.
-          await markRevisionResolved(supabase, revId);
+          // applyRevision also accepts unknown statuses as a no-op. Those do
+          // not prove a booking was saved and must not trigger a restored alert.
+          if (["new", "modified", "cancellation"].includes(revision.attributes.status)) {
+            await markRevisionResolved(supabase, revId);
+          }
 
           try {
             await channexPostRaw(
@@ -167,6 +171,7 @@ serve(async (req) => {
           } catch (ackErr: any) {
             // Apply succeeded but ack failed — the revision will re-surface
             // in 30 minutes. Log it but don't count as a failed apply.
+            console.error(`[pollBookingFeed] Ack failed for revision ${revId}:`, ackErr);
             errors.push(`Ack failed for revision ${revId}: ${ackErr.message}`);
             applied++;
           }
@@ -178,6 +183,8 @@ serve(async (req) => {
             revision.attributes?.booking_id ?? null,
             result.reason,
             result.kind,
+            propId ?? null,
+            revision.attributes?.ota_reservation_code ?? null,
           );
 
           const ageMs = Date.now() - new Date(first_failed_at).getTime();
@@ -237,18 +244,24 @@ serve(async (req) => {
     );
 
     return new Response(
-      JSON.stringify({ applied, skipped, failed, permanent, acked, errors, source }),
+      JSON.stringify({ applied, skipped, failed, permanent, acked, source,
+        errors: errors.length ? ["Some booking changes could not be synced. Please review the sync logs."] : [],
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
   } catch (err: any) {
-    console.error("[pollBookingFeed] Fatal error:", err.message);
+    console.error("[pollBookingFeed] Fatal error:", err);
     return new Response(
-      JSON.stringify({ error: err.message, applied, failed, acked, errors }),
+      JSON.stringify({ error: "Booking sync could not finish. Please try again.", applied, failed, acked }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
+  } finally {
+    // Includes aged incidents whose revisions have dropped out of the feed,
+    // and retries notification delivery independently of booking apply/ACK.
+    if (supabase) await dispatchSyncNotifications(supabase);
   }
 });

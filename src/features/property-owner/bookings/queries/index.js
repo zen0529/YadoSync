@@ -6,6 +6,7 @@ export const getBookings = async ({ propertyId, otaName } = {}) => {
     .from("bookings")
     .select(`
       id,
+      property_id,
       channex_booking_id,
       ota_name,
       ota_reservation_code,
@@ -13,7 +14,7 @@ export const getBookings = async ({ propertyId, otaName } = {}) => {
       guest_name,
       guest_email,
       guest_phone,
-      room_type_id,
+      booked_rooms,
       check_in,
       check_out,
       amount,

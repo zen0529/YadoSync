@@ -5,8 +5,6 @@
  * Shows unread badge, real-time alert list, and quick navigation.
  */
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Bell,
   Check,
@@ -18,58 +16,22 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { useActiveProperty } from "@/features/property-owner/context/PropertyContext";
-import { useNotifications } from "../hooks/useNotifications";
+import { useNotificationBell } from "../../hooks/useNotificationBell";
+import { NotificationDetailsDialog } from "./NotificationDetailsDialog";
 
 export function NotificationBell() {
-  const { activeProperty } = useActiveProperty();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-
   const {
-    notifications,
+    items: notifications,
     unreadCount,
-    markAsRead,
     markAllAsRead,
     isLoading,
-  } = useNotifications(activeProperty?.id);
-
-  const handleNotificationClick = (notification) => {
-    if (notification.status === "unread") {
-      markAsRead(notification.id);
-    }
-    setOpen(false);
-
-    if (notification.type === "booking_modified" || notification.booking_id) {
-      navigate("/dashboard/bookings", {
-        state: {
-          openModifiedBookingId: notification.booking_id,
-          timestamp: Date.now(),
-        },
-      });
-    }
-  };
-
-  const formatTimestamp = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMin = Math.floor(diffMs / 60_000);
-    const diffHours = Math.floor(diffMin / 60);
-
-    if (diffMin < 1) return "Just now";
-    if (diffMin < 60) return `${diffMin}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  };
+    open, setOpen, handleNotificationClick, selectedNotification, closeDetails,
+  } = useNotificationBell();
 
   return (
+    <>
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
@@ -131,14 +93,15 @@ export function NotificationBell() {
             </div>
           ) : (
             notifications.map((notif) => {
-              const isUnread = notif.status === "unread";
-              const isModified = notif.type === "booking_modified";
+              const isUnread = notif.isUnread;
+              const isWarning = notif.tone === "warning";
 
               return (
-                <div
+                <button
+                  type="button"
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`px-4 py-3 flex gap-3 items-start cursor-pointer transition-colors ${
+                  className={`w-full text-left px-4 py-3 flex gap-3 items-start cursor-pointer transition-colors ${
                     isUnread
                       ? "bg-amber-500/[0.04] hover:bg-amber-500/[0.08]"
                       : "hover:bg-muted/50"
@@ -146,13 +109,15 @@ export function NotificationBell() {
                 >
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                      isModified
+                      isWarning
                         ? "bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
                         : "bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400"
                     }`}
                   >
-                    {isModified ? (
+                    {isWarning ? (
                       <AlertTriangle className="w-3.5 h-3.5" />
+                    ) : notif.tone === "success" ? (
+                      <CalendarCheck className="w-3.5 h-3.5" />
                     ) : (
                       <Info className="w-3.5 h-3.5" />
                     )}
@@ -167,11 +132,11 @@ export function NotificationBell() {
                             : "font-medium text-foreground/80"
                         }`}
                       >
-                        {isModified ? "Booking Modified" : "Notification"}
+                        {notif.title}
                       </p>
                       <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-1">
                         <Clock className="w-2.5 h-2.5" />
-                        {formatTimestamp(notif.created_at)}
+                        {notif.timeLabel}
                       </span>
                     </div>
 
@@ -179,7 +144,7 @@ export function NotificationBell() {
                       {notif.message || "An OTA reservation was updated."}
                     </p>
 
-                    {isModified && (
+                    {notif.action !== "details" && (
                       <div className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
                         <span>Review details</span>
                         <span>→</span>
@@ -190,12 +155,16 @@ export function NotificationBell() {
                   {isUnread && (
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
                   )}
-                </div>
+                </button>
               );
             })
           )}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+    <NotificationDetailsDialog notification={selectedNotification} onClose={closeDetails} />
+    </>
   );
 }
+
+export default NotificationBell;

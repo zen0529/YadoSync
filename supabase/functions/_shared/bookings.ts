@@ -16,7 +16,7 @@ import type { ErrorKind } from "./bookingsPage/classifyError.ts";
 /**
  * Upsert a failure record for a revision that could not be applied.
  *
- * Uses a single Postgres function (`upsert_revision_failure`) that does an
+ * Uses a single Postgres function (`record_booking_sync_failure`) that does an
  * atomic INSERT ... ON CONFLICT DO UPDATE so attempt_count is incremented
  * safely without a read-modify-write race.
  *
@@ -24,7 +24,7 @@ import type { ErrorKind } from "./bookingsPage/classifyError.ts";
  * 30-minute Channex feed expiry window.
  *
  * The backing SQL function is defined in:
- *   supabase/migrations/20260916_revision_failures.sql
+ *   supabase/migrations/20260930120000_booking_sync_notifications.sql
  */
 export async function upsertRevisionFailure(
   supabase: ReturnType<typeof createClient>,
@@ -32,22 +32,25 @@ export async function upsertRevisionFailure(
   bookingId: string | null,
   reason: string,
   kind: ErrorKind,
+  channexPropertyId: string | null,
+  reservationCode: string | null,
 ): Promise<{ first_failed_at: string }> {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase.rpc("upsert_revision_failure", {
+  const { data, error } = await supabase.rpc("record_booking_sync_failure", {
     p_revision_id:  revisionId,
     p_booking_id:   bookingId,
     p_last_error:   reason,
     p_error_kind:   kind,
-    p_tried_at:     now,
+    p_channex_property_id: channexPropertyId,
+    p_reservation_code: reservationCode,
   });
 
   if (error || !data) {
     // Failure tracking itself failed — log but don't throw; the original apply
     // failure is what matters. Return a safe fallback so the caller can still
     // check the 30-minute window (worst case we use now, which is conservative).
-    console.error("[bookings] Failed to upsert revision_failure record:", error?.message);
+    console.error("[bookings] Failed to upsert revision_failure record:", error);
     return { first_failed_at: now };
   }
 

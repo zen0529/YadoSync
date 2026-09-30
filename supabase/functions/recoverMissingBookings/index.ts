@@ -28,7 +28,8 @@ import {
   type BookingRoom,
 } from "../_shared/channex.ts";
 import { applyRevision } from "../_shared/bookingsPage/applyRevision.ts";
-import { markRevisionRecoveredByBookingId } from "../_shared/bookings.ts";
+import { markRevisionRecoveredByBookingId, markRevisionResolved } from "../_shared/bookings.ts";
+import { dispatchSyncNotifications } from "../_shared/bookingsPage/dispatchSyncNotifications.ts";
 
 const CHANNEX_BASE_URL = Deno.env.get("CHANNEX_BASE_URL") ?? "https://staging.channex.io";
 
@@ -135,9 +136,10 @@ serve(async (req) => {
     }
   }
 
+  let dryRun = true;
   try {
     const body: RecoveryRequestBody = await req.json().catch(() => ({}));
-    const dryRun = Boolean(body.dry_run);
+    dryRun = Boolean(body.dry_run);
 
     // ── Step 2: Query unresolved failures older than 30 min ──────────────────
     const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1_000).toISOString();
@@ -218,28 +220,31 @@ serve(async (req) => {
       .filter(Boolean);
 
     const existingIdSet = new Set<string>();
+    const savedRevisionIds = new Set<string>();
 
     // Chunk lookup by 200 to stay well within query limits
     for (let i = 0; i < bookingIds.length; i += 200) {
       const chunk = bookingIds.slice(i, i + 200);
       const { data: existingRows, error: lookupErr } = await supabase
         .from("bookings")
-        .select("channex_booking_id")
+        .select("channex_booking_id, channex_revision_id")
         .in("channex_booking_id", chunk);
 
       if (lookupErr) {
         console.error("[recoverMissingBookings] Error looking up existing bookings:", lookupErr);
       } else {
-        (existingRows ?? []).forEach((r: { channex_booking_id: string }) =>
-          existingIdSet.add(r.channex_booking_id),
-        );
+        (existingRows ?? []).forEach((r: { channex_booking_id: string; channex_revision_id: string | null }) => {
+          existingIdSet.add(r.channex_booking_id);
+          if (r.channex_revision_id) savedRevisionIds.add(r.channex_revision_id);
+        });
       }
     }
 
-    // Resolve any failures for bookings that already exist in Supabase
-    for (const bId of bookingIds) {
-      if (existingIdSet.has(bId)) {
-        await markRevisionRecoveredByBookingId(supabase, bId);
+    // Existence alone does not prove that a failed modification/cancellation was
+    // applied. Only acknowledge the exact saved revision, and never in a dry run.
+    if (!dryRun) {
+      for (const revisionId of savedRevisionIds) {
+        await markRevisionResolved(supabase, revisionId);
       }
     }
 
@@ -272,6 +277,12 @@ serve(async (req) => {
       // Construct a synthetic BookingRevision payload compatible with applyRevision
       const rawStatus = (attr?.status ?? "new").toLowerCase();
       const normalizedStatus = rawStatus === "cancelled" ? "cancellation" : rawStatus;
+      if (!["new", "modified", "cancellation"].includes(normalizedStatus)) {
+        console.error(`[recoverMissingBookings] Unsupported booking status for ${bId}:`, rawStatus);
+        failed++;
+        errors.push("A booking could not be recovered. Please review the sync logs.");
+        continue;
+      }
 
       const revisionId = (attr as any)?.revision_id || attr?.id || item.id;
 
@@ -307,7 +318,7 @@ serve(async (req) => {
       } else {
         failed++;
         console.error(`[recoverMissingBookings] Failed to apply missing booking ${bId}:`, result.reason);
-        errors.push(`Booking ${bId}: ${result.reason}`);
+        errors.push("A booking could not be recovered. Please review the sync logs.");
       }
     }
 
@@ -356,5 +367,7 @@ serve(async (req) => {
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  } finally {
+    if (!dryRun) await dispatchSyncNotifications(supabase);
   }
 });

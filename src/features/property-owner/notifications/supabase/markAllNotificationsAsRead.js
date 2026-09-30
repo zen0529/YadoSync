@@ -19,6 +19,7 @@ export async function markAllNotificationsAsRead(propertyId) {
     .from("notifications")
     .update({ status: "read" })
     .eq("property_id", propertyId)
+    .eq("channel", "in_app")
     .eq("status", "unread");
 
   if (error) {

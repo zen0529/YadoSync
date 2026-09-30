@@ -1,53 +1,59 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { TapeChart } from "../components/TapeChart";
 import { AddBookingModal } from "../components/AddBookingModal";
 import { ModifiedBookingDetailsModal } from "../components/ModifiedBookingDetailsModal";
 import { useBookings } from "../hooks/useBookings";
+import { useTapeChartInventory } from "../hooks/useTapeChartInventory";
+import { useActiveProperty } from "@/features/property-owner/context/PropertyContext";
 
 export const BookingsPage = () => {
-  const [otaFilter, setOtaFilter] = useState("all");
+  const { selectedPropertyId, isLoading: propertyLoading } = useActiveProperty();
+  const otaFilter = "all";
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isModifiedModalOpen, setIsModifiedModalOpen] = useState(false);
-  const [selectedModifiedBookingId, setSelectedModifiedBookingId] = useState(null);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Real data from Supabase — refreshes every 60 seconds
+  // Keep all owner bookings available for notification links; the calendar uses the active property.
   const {
     data: bookings = [],
     isLoading,
     isError,
     refetch,
-    isFetching,
   } = useBookings();
+  const {
+    data: inventory,
+    isLoading: inventoryLoading,
+    isError: inventoryError,
+  } = useTapeChartInventory(selectedPropertyId);
 
-  // Automatically open the modified booking details modal when navigating from a notification
-  useEffect(() => {
-    if (location.state?.openModifiedBookingId || location.state?.openModifiedModal) {
-      setSelectedModifiedBookingId(location.state?.openModifiedBookingId || null);
-      setIsModifiedModalOpen(true);
-      // Clear location state so refreshing or subsequent navigation doesn't re-trigger the modal
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.state, location.pathname, navigate]);
+  const isModifiedModalOpen = Boolean(location.state?.openModifiedBookingId || location.state?.openModifiedModal);
+  const selectedModifiedBookingId = location.state?.openModifiedBookingId || null;
 
   // Client-side filter by OTA
   const filtered = bookings.filter(
-    (b) => otaFilter === "all" || b.ota_name === otaFilter,
+    (b) => b.property_id === selectedPropertyId && (otaFilter === "all" || b.ota_name === otaFilter),
   );
 
   return (
     <div className="flex flex-col h-[calc(100vh-6.5rem)]">
-      {/* Main Content Area */}
       <div className="flex-1 min-h-0">
-        <TapeChart
-          bookings={filtered}
-          selectedResort="all"
-          selectedPlatform={otaFilter}
-          onAddClick={() => setIsModalOpen(true)}
-        />
+        {!selectedPropertyId && !propertyLoading ? (
+          <div className="rounded-lg border border-border p-6 text-sm text-muted-foreground">Select or create a property to view its bookings.</div>
+        ) : propertyLoading || isLoading || inventoryLoading ? (
+          <div className="rounded-lg border border-border p-6 text-sm text-muted-foreground">Loading bookings calendar…</div>
+        ) : isError || inventoryError ? (
+          <div className="rounded-lg border border-destructive p-6 text-sm text-destructive">The bookings calendar could not be loaded. Please try again.</div>
+        ) : (
+          <TapeChart
+            key={selectedPropertyId}
+            bookings={filtered}
+            roomTypes={inventory?.roomTypes ?? []}
+            ratePlans={inventory?.ratePlans ?? []}
+            onAddClick={() => setIsModalOpen(true)}
+          />
+        )}
       </div>
 
       <AddBookingModal
@@ -59,8 +65,7 @@ export const BookingsPage = () => {
       <ModifiedBookingDetailsModal
         open={isModifiedModalOpen}
         onOpenChange={(open) => {
-          setIsModifiedModalOpen(open);
-          if (!open) setSelectedModifiedBookingId(null);
+          if (!open) navigate(location.pathname, { replace: true, state: {} });
         }}
         bookings={bookings}
         selectedBookingId={selectedModifiedBookingId}

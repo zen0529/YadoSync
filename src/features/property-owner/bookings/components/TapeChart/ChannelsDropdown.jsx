@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
+import { PopoverContent } from "@/components/ui/popover";
 import {
   Search,
   Phone,
@@ -145,8 +146,8 @@ const OTHER_SOURCES = [
 
 const STATUS_OPTIONS = [
   { id: "confirmed", label: "Confirmed", icon: "status-confirmed" },
+  { id: "modified", label: "Modified", icon: "status-pending" },
   { id: "pending", label: "Pending", icon: "status-pending" },
-  { id: "cancelled", label: "Cancelled", icon: "status-cancelled" },
   { id: "blocked", label: "Blocked", icon: "status-blocked" },
 ];
 
@@ -170,7 +171,6 @@ export const ChannelsDropdown = ({
 }) => {
   const [search, setSearch] = useState("");
   const [showMore, setShowMore] = useState(false);
-  const dropdownRef = useRef(null);
 
   // Initialize selected state with all channels and statuses
   const allChannelIds = [
@@ -191,20 +191,6 @@ export const ChannelsDropdown = ({
   const [checkedStatuses, setCheckedStatuses] = useState(
     () => new Set(allStatusIds),
   );
-
-  // Close when clicking outside
-  useEffect(() => {
-    if (!open) return;
-
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open, onClose]);
 
   const allChannelsSelected = allChannelIds.every((id) =>
     checkedChannels.has(id),
@@ -278,9 +264,12 @@ export const ChannelsDropdown = ({
     : visibleInitialOtas;
 
   return (
-    <div
-      ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-[285px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl z-50 p-4 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[540px]"
+    <PopoverContent
+      align="end"
+      sideOffset={8}
+      collisionPadding={12}
+      aria-label="Channel filters"
+      className="w-[285px] max-w-[calc(100vw-24px)] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl p-4 flex flex-col max-h-[min(540px,var(--radix-popover-content-available-height))]"
     >
       {/* Popover Header */}
       <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-2.5">
@@ -300,7 +289,7 @@ export const ChannelsDropdown = ({
       </div>
 
       {/* Scrollable Channels List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-3">
+      <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-3">
         {/* All Channels Option */}
         <label className="flex items-center gap-2.5 py-0.5 cursor-pointer select-none">
           <input
@@ -412,7 +401,7 @@ export const ChannelsDropdown = ({
       </div>
 
       {/* Footer Buttons */}
-      <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+      <div className="shrink-0 pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={handleClear}
@@ -429,6 +418,6 @@ export const ChannelsDropdown = ({
           Apply
         </button>
       </div>
-    </div>
+    </PopoverContent>
   );
 };

@@ -22,7 +22,7 @@
 | **Shared util** | `_shared/bookings.ts` | ✅ `upsertRevisionFailure()` + `markRevisionResolved()` — failure tracking helpers. |
 | **Hook** | `bookings/hooks/useBookings.js` | ✅ TanStack Query, `refetchInterval: 60s`. ✅ `otaName` + `propertyId` params supported. ✅ Realtime subscription on `bookings` (Phase 3.1). ❌ OTA filter still client-side in `BookingsPage.jsx` (Phase 3.4). |
 | **Edge Function** | `recoverMissingBookings/index.ts` | ✅ Live (Phase 2.1 & 2.2). Drains Channex archive for missing bookings older than 30 min, applies via `applyRevision`, marks resolved, and writes to `sync_logs`. |
-| **Page** | `bookings/ui/BookingsPage.jsx` | ✅ Notification-driven `ModifiedBookingDetailsModal` (Phase 3.2). ✅ OTA filter UI. ✅ TapeChart + AddBookingModal. ❌ OTA filter is client-side `.filter()` (Phase 3.4). ❌ No `SyncHealthBanner` (Phase 3.3). |
+| **Page** | `bookings/ui/BookingsPage.jsx` | ✅ Notification-driven `ModifiedBookingDetailsModal` (Phase 3.2). ✅ OTA filter UI. ✅ TapeChart + AddBookingModal. ❌ OTA filter is client-side `.filter()` (Phase 3.4). ✅ Booking sync notifications implemented locally (Phase 3.3; backend deployment pending). |
 | **Superadmin** | `logs/components/RecoverBookingsModal.jsx` | ✅ Live (Phase 4.1). Manual recovery trigger modal with dry-run support calling `recoverMissingBookings`. |
 
 ### Cron Job (already live)
@@ -300,20 +300,97 @@ src/features/property-owner/bookings/components/
 
 ---
 
-### 3.3 — Sync health banner
+### 3.3 — Booking sync notifications (replaces sync health banner)
 
-Surface the `revision_failures` table data so the property owner sees when a booking
-is stuck in a retry loop.
+**Status:** Implemented locally. Database migration and Edge Function deployment are required to activate backend notification generation.
 
-**Add to `BookingsPage`:** A `SyncHealthBanner` component (below the `modified_pending`
-banner) that:
-- Queries `revision_failures` where `resolved = false`
-- If none → renders nothing
-- If some → shows: *"X bookings couldn't sync. We're retrying automatically."*
-- If any `first_failed_at > 25 minutes` → warning: *"A booking may need manual recovery.
-  Contact support."*
+**Product decision:** Show booking sync problems in the existing notification bell,
+alongside modified-booking notifications. Do not add a `SyncHealthBanner` to the calendar.
+Owners need to know that their calendar may be missing a booking or an update;
+manual recovery remains a superadmin operation. Transient failures can still resolve
+through the existing automatic retry flow.
 
-**File:** `src/features/property-owner/bookings/components/SyncHealthBanner.jsx`
+#### Owner notification behavior
+
+- Ordinary short-lived retries: no repeated owner notifications.
+- Notify once when an unresolved failure is permanent, or when
+  `now - first_failed_at >= 25 minutes`. This is an early-warning threshold, not proof
+  that the revision has expired or that manual recovery is already required.
+- Use `type: "booking_sync_issue"`, `channel: "in_app"`, and the affected local
+  `property_id`. Suggested message:
+  *"A booking for [property name] hasn't synced successfully. Your calendar may be
+  missing a booking or an update. A booking may need manual recovery. Contact support."*
+- Show the property and reservation reference when available. Never expose raw
+  Channex/Supabase errors in the notification.
+- Clicking the notification marks it read and displays the full sync message in an
+  informational dialog. It must work even when no local booking row exists. Do not
+  open the modified-booking modal or offer an owner recovery action.
+- After successful retry or manual recovery, send one `booking_sync_restored`
+  follow-up for an incident that was previously reported. Suggested message:
+  *"The reported booking sync issue for [property name] has been resolved. The booking
+  data has been saved."* Only report success after the relevant booking data is saved.
+  A successfully saved modification may still need the existing room-assignment review.
+- Reading a notification does not resolve the underlying sync failure.
+
+#### Backend requirements
+
+- Generate durable notifications from the backend so they are recorded even when
+  the owner is offline. Keep technical failure details in `revision_failures` and
+  `sync_logs`; owners read only their property-scoped notifications.
+- Persist the affected local property ID with failure tracking. A missing booking
+  cannot be used to look up ownership, and the current failure table/helper does
+  not carry that property ID. Resolve it from the incoming revision's property
+  mapping. Unknown properties must not generate notifications to arbitrary owners.
+- Deduplicate notification events with database uniqueness, for example on
+  `(revision_id, notification_type)`. Poll retries and concurrent workers must not
+  produce duplicate alerts. Preserve enough incident state to retry failed
+  notification delivery without treating it as a booking-apply failure.
+- Check persisted unresolved failures for the age threshold even if a revision no
+  longer appears in the feed. This is a local incident check, not an automatic
+  archive recovery job.
+- Keep superadmin failure visibility and manual recovery available. Do not claim
+  "support has been notified" unless a corresponding admin alert was actually
+  recorded/delivered.
+- Verify notification RLS and Realtime delivery for the affected owner. Email/SMS
+  are outside this in-app change; any later delivery must respect user preferences.
+
+#### Implemented notification integration points
+
+- `notifications/components/NotificationBell/`: sync labels/icons and a full-message
+  informational dialog. `useNotificationBell` routes only explicit `booking_modified`
+  events to the modification modal and uses `selectedPropertyId`.
+- `notifications/hooks/useNotifications.js`: Realtime insert/update invalidation,
+  suitable toast text, and a 60-second query fallback. Queries/read updates only
+  target in-app notifications.
+- `pollBookingFeed`, shared failure helpers, and `recoverMissingBookings`: persist
+  property mapping and dispatch durable issue/restored events. Dispatch runs even
+  for empty/failed feed requests. Recovery dry runs never resolve incidents; an
+  existing booking resolves only its exact saved revision.
+- `20260930120000_booking_sync_notifications.sql`: deduplication index, backend-only
+  recording/dispatch RPCs, owner-scoped notification access, status-only owner
+  updates, and admin-only raw failure visibility.
+
+#### Deployment and verification
+
+1. Apply `supabase/migrations/20260930120000_booking_sync_notifications.sql` first.
+2. Deploy `pollBookingFeed` and `recoverMissingBookings` with their updated shared helpers.
+3. Deploy the frontend and verify a staging owner receives an issue notification,
+   can read its details, and receives one follow-up after successful recovery.
+
+Local verification: notification routing/dispatch tests, poller/recovery regression
+tests, frontend lint, production build, and isolated PostgreSQL migration checks
+covering thresholds, deduplication, mapping, notification retry and RLS. Run the SQL
+checks with `node supabase/tests/bookingSyncNotifications.mjs` after the temporary
+test-engine installation documented at the top of that file. Hosted Realtime
+delivery still needs the staging check after deployment.
+
+Historical failures without a saved booking or a known property mapping remain
+admin-only until a retry supplies their mapping. The local incident sweep runs
+with the poller; alerts resume when the poller resumes after an outage.
+
+**Acceptance checks:** one alert per incident despite repeated retries; visible
+only to the affected owner; readable without a local booking row; no modified
+modal for sync alerts; one recovery follow-up after success; no calendar banner.
 
 ---
 
@@ -367,7 +444,7 @@ Implemented in Superadmin Sync Logs (`src/features/superadmin/logs/`):
 ✅ Phase 2.2  sync_logs entries for recovery
 ✅ Phase 3.1  useBookings: realtime subscription
 ✅ Phase 3.2  ModifiedBookingDetailsModal component
-Phase 3.3  SyncHealthBanner component
+Phase 3.3  Booking sync issue/restored notifications (replaces banner)
 Phase 3.4  OTA filter: server-side via hook params
 ✅ Phase 4.1  Superadmin: RecoverBookingsModal (in logs)
 ```

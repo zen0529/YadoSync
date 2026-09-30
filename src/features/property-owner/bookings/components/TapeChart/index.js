@@ -4,4 +4,3 @@ export { TapeChartGrid } from "./TapeChartGrid";
 export { BookingTape } from "./BookingTape";
 export { BookingDetailModal } from "./BookingDetailModal";
 export { ChannelsDropdown } from "./ChannelsDropdown";
-export * from "./tapeChartData";

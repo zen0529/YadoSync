@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { getNotificationPresentation } from "../utils/notificationPresentation";
 import {
   fetchNotifications,
   markNotificationAsRead,
@@ -25,11 +26,12 @@ export function useNotifications(propertyId) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifications = [], isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["notifications", propertyId],
     queryFn: () => fetchNotifications({ propertyId }),
     enabled: Boolean(propertyId),
     staleTime: 30_000,
+    refetchInterval: 60_000,
     throwOnError: false,
   });
 
@@ -66,7 +68,7 @@ export function useNotifications(propertyId) {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "notifications",
           filter: `property_id=eq.${propertyId}`,
@@ -75,6 +77,7 @@ export function useNotifications(propertyId) {
           queryClient.invalidateQueries({ queryKey: ["notifications", propertyId] });
 
           const newNotif = payload.new;
+          if (payload.eventType !== "INSERT" || newNotif?.channel !== "in_app") return;
           if (newNotif?.type === "booking_modified") {
             // Invalidate bookings cache immediately
             queryClient.invalidateQueries({ queryKey: ["bookings"] });
@@ -86,8 +89,19 @@ export function useNotifications(propertyId) {
                 "An OTA reservation was modified. Please review room assignments.",
               action: {
                 label: "Review",
-                onClick: () => navigate("/dashboard/bookings"),
+                onClick: () => navigate("/dashboard/bookings", {
+                  state: { openModifiedBookingId: newNotif.booking_id, openModifiedModal: true, timestamp: Date.now() },
+                }),
               },
+              duration: 8000,
+            });
+          } else if (newNotif.type === "booking_sync_issue" || newNotif.type === "booking_sync_restored") {
+            const presentation = getNotificationPresentation(newNotif.type);
+            if (newNotif.type === "booking_sync_restored") {
+              queryClient.invalidateQueries({ queryKey: ["bookings"] });
+            }
+            toast[presentation.tone === "success" ? "success" : "warning"](presentation.title, {
+              description: newNotif.message,
               duration: 8000,
             });
           } else {
@@ -110,5 +124,6 @@ export function useNotifications(propertyId) {
     markAsRead: markReadMutation.mutate,
     markAllAsRead: markAllReadMutation.mutate,
     isLoading,
+    notificationsUpdatedAt: dataUpdatedAt,
   };
 }

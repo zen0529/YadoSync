@@ -21,6 +21,7 @@ export async function fetchNotifications({ propertyId, limit = 20 }) {
     .from("notifications")
     .select("id, property_id, booking_id, type, channel, status, message, created_at, sent_at")
     .eq("property_id", propertyId)
+    .eq("channel", "in_app")
     .order("created_at", { ascending: false })
     .limit(limit);
 

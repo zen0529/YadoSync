@@ -7,7 +7,7 @@ import { SuperadminRoute } from "@/components/SuperadminRoute";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { SuperadminLayout } from "@/layouts/SuperadminLayout";
 import { DashboardPage } from "@/features/property-owner/dashboard/ui/DashboardPage";
-import { BookingsPage } from "@/features/property-owner/bookings/ui/BookingsPage";
+import { BookingsPage } from "@/features/property-owner/bookings";
 import { ResortsPage } from "@/features/property-owner/resorts/ui/ResortsPage";
 import { AnalyticsPage } from "@/features/property-owner/analytics/ui/AnalyticsPage";
 import { RoomAndRatesPage } from "@/features/property-owner/roomAndRates/pages/roomAndRatesPage";
